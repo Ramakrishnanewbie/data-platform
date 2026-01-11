@@ -3,83 +3,38 @@ import { UploadIcon, VideoIcon, ZapIcon } from 'lucide-react';
 export const featuresData = [
     {
         icon: <UploadIcon className="w-6 h-6" />,
-        title: 'Discovery & Planning',
-        desc: 'We understand your goals, audience and challenges to craft a clear, actionable strategy.'
+        title: 'Discover & Catalog',
+        desc: 'Explore your data assets with intelligent cataloging, lineage tracking, and automated documentation.'
     },
     {
         icon: <ZapIcon className="w-6 h-6" />,
-        title: 'Design & Development',
-        desc: 'High-quality design and scalable development focused on performance and usability.'
+        title: 'Query & Visualize',
+        desc: 'Run SQL queries, build charts, and create dashboards with real-time collaboration and per-user permissions.'
     },
     {
         icon: <VideoIcon className="w-6 h-6" />,
-        title: 'Launch & Growth',
-        desc: 'We launch, optimize and continuously improve to drive measurable business growth.'
+        title: 'AI-Powered Insights',
+        desc: 'Let AI agents analyze your data, generate queries, and surface insights automatically.'
     }
 ];
 
-export const plansData = [
-    {
-        id: 'starter',
-        name: 'Starter',
-        price: '$499',
-        desc: 'Best for early-stage startups.',
-        credits: 'One-time',
-        features: [
-            'Project discovery & planning',
-            'UI/UX design',
-            'Basic website development',
-            '1 revision round',
-            'Email support'
-        ]
-    },
-    {
-        id: 'pro',
-        name: 'Growth',
-        price: '$1,499',
-        desc: 'Growing teams and businesses.',
-        credits: 'Monthly',
-        features: [
-            'Everything in Starter',
-            'Advanced UI/UX design',
-            'Custom development',
-            'Performance optimization',
-            'Priority support'
-        ],
-        popular: true
-    },
-    {
-        id: 'ultra',
-        name: 'Scale',
-        price: '$3,999',
-        desc: 'For brands ready to scale fast.',
-        credits: 'Custom',
-        features: [
-            'Everything in Growth',
-            'Dedicated project manager',
-            'Ongoing optimization',
-            'Marketing & growth support',
-            'Chat + Email support'
-        ]
-    }
-];
 
 export const faqData = [
     {
-        question: 'What services does your agency provide?',
-        answer: 'We offer end-to-end digital services including brand strategy, UI/UX design, web and app development and growth-focused marketing solutions.'
+        question: 'What data sources does the platform support?',
+        answer: 'We currently integrate with Google BigQuery with support for per-user OAuth authentication. Additional data sources and connectors are in development.'
     },
     {
-        question: 'Do you work with startups or only large companies?',
-        answer: 'We work with startups, growing businesses and established brands. Our process is flexible and tailored to match your goals and scale.'
+        question: 'How does per-user authentication work?',
+        answer: 'Users authenticate with their own Google accounts via OAuth, ensuring data access follows your existing BigQuery IAM permissions and PII policies.'
     },
     {
-        question: 'How long does a typical project take?',
-        answer: 'Project timelines vary by scope, but most projects take between 2–6 weeks. We provide a clear timeline after the discovery phase.'
+        question: 'Can I use this with my existing data infrastructure?',
+        answer: 'Yes. The platform connects to your existing BigQuery projects and datasets. No data migration required—just connect and start exploring.'
     },
     {
-        question: 'Do you offer ongoing support after launch?',
-        answer: 'Yes. We offer maintenance, optimization and growth support packages to ensure your product continues to perform and evolve.'
+        question: 'What AI capabilities are included?',
+        answer: 'AI agents can generate SQL queries, provide data insights, automate quality checks, and answer natural language questions about your data.'
     }
 ];
 

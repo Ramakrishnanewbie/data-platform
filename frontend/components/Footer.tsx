@@ -16,7 +16,7 @@ export default function Footer() {
                     <div>
                         <img src='/logo.svg' alt="logo" className="h-8" />
                         <p className="max-w-[410px] mt-6 text-sm leading-relaxed">
-                            We are a digital agency focused on strategy, design and development—helping brands build meaningful digital experiences and grow sustainably.
+                            A unified data platform for analytics, exploration and insights—helping teams discover, transform and visualize data with integrated tools and AI assistance.
                         </p>
                     </div>
 
@@ -44,14 +44,6 @@ export default function Footer() {
                         ))}
                     </div>
                 </div>
-
-                <p className="py-4 text-center text-sm text-gray-400">
-                    © {new Date().getFullYear()} {' '}
-                    <a href="https://prebuiltui.com/tailwind-templates?ref=pixel-forge">
-                        PrebuiltUI
-                    </a>
-                    . All rights reserved.
-                </p>
             </div>
         </motion.footer>
     );

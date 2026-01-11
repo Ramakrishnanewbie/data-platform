@@ -8,13 +8,13 @@ export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
 
     const navLinks = [
-        { name: 'Home', href: '/#' },
-        { name: 'SQL Editor', href: '/#features' },
-        { name: 'Data Lineage Graphs', href: '/#pricing' },
-        { name: 'Dashboards', href: '/#faq' },
-        { name: 'Data Catalog', href: '/#faq' },
-        { name: 'AI Chat', href: '/#faq' },
-        { name: 'BI Analytics', href: '/#faq' },
+        { name: 'Home', href: '' },
+        { name: 'SQL Editor', href: '/sql' },
+        { name: 'Data Lineage Graphs', href: '/lineage' },
+        { name: 'Dashboards', href: '/dashboards' },
+        { name: 'Data Catalog', href: '/catalog' },
+        { name: 'AI Chat', href: '/ai-chat' },
+        { name: 'BI Analytics', href: '/bi-analytics' },
     ];
 
     return (
