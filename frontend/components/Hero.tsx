@@ -43,7 +43,7 @@ export default function Hero() {
     
     {/* Hero section - top layer */}
     <section id="home" className="relative z-10">
-        <div className="max-w-6xl mx-auto px-4 min-h-screen max-md:w-screen max-md:overflow-hidden pt-32 md:pt-26 flex items-center justify-center">
+        <div className="max-w-6xl mx-auto px-4 min-h-[80vh] max-md:w-screen max-md:overflow-hidden pt-32 md:pt-26 flex items-center justify-center">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
                 <div className="text-left">
                     <motion.h1 className="text-4xl md:text-5xl font-bold leading-tight mb-6 max-w-xl"
@@ -113,8 +113,8 @@ export default function Hero() {
     </section>
 
     {/* LOGO MARQUEE */}
-    <motion.section className="relative z-10 border-y border-white/6 bg-white/1 max-md:mt-10"
-        initial={{ y: 60, opacity: 0 }}
+    <motion.section className="relative z-10 border-y border-white/6 bg-white/1"
+        initial={{ y: 30, opacity: 0 }}
         whileInView={{ y: 0, opacity: 1 }}
         viewport={{ once: true }}
         transition={{ type: "spring", stiffness: 250, damping: 70, mass: 1 }}

@@ -15,6 +15,7 @@ import {
   SignedOut,
   UserButton,
 } from '@clerk/nextjs'
+import { Particles } from "@/components/ui/particles";
 
 
 const outfit = Outfit({
@@ -51,10 +52,9 @@ export default function RootLayout({
         <html lang="en">
             <ScrollProgress />
             <body className={`${outfit.variable} ${geistSans.variable} ${geistMono.variable}`}>
-                    <SoftBackdrop />
-                    <LenisScroll />
-                    {children}
-                    
+            <SoftBackdrop />
+            <LenisScroll />
+            {children}        
             </body>
         </html>
     );

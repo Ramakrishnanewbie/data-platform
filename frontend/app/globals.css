@@ -7,6 +7,14 @@
     --font-sans: 'Outfit', sans-serif;
 }
 
+
+
+body {
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+
+
 @layer base {
     body {
         @apply bg-gray-950 text-white antialiased;
