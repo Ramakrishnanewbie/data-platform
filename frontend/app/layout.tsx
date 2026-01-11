@@ -1,5 +1,5 @@
 import { Outfit } from "next/font/google";
-import "./globals.css";
+import "./styles.css";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import SoftBackdrop from "@/components/SoftBackdrop";
