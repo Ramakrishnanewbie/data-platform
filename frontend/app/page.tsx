@@ -1,10 +1,9 @@
 'use client'
-import Hero from "@/components/Hero";
-import Features from "@/components/Features";
-import Faq from "@/components/Faq";
-import CTA from "@/components/CTA";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Hero from "@/components/prebuilt/Hero";
+import Features from "@/components/prebuilt/Features";
+import Faq from "@/components/prebuilt/Faq";
+import Navbar from "@/components/prebuilt/Navbar";
+import Footer from "@/components/prebuilt/Footer";
 
 export default function Page() {
     return (

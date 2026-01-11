@@ -1,9 +1,9 @@
 import { Outfit } from "next/font/google";
 import "./styles.css";
-import Footer from "@/components/Footer";
-import Navbar from "@/components/Navbar";
-import SoftBackdrop from "@/components/SoftBackdrop";
-import LenisScroll from "@/components/lenis";
+import Footer from "@/components/prebuilt/Footer";
+import Navbar from "@/components/prebuilt/Navbar";
+import SoftBackdrop from "@/components/prebuilt/SoftBackdrop";
+import LenisScroll from "@/components/prebuilt/lenis";
 import { Metadata } from "next";
 import { Geist, Geist_Mono } from 'next/font/google';
 import {ScrollProgress} from "@/components/ui/scroll-progress";

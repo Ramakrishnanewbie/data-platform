@@ -2,7 +2,7 @@ import { ArrowRightIcon, PlayIcon, ZapIcon, CheckIcon } from 'lucide-react';
 import { PrimaryButton, GhostButton } from './Buttons';
 import { motion } from 'framer-motion'; 
 import { DottedMap } from "@/components/ui/dotted-map"  
-import { Ripple } from './ui/ripple';
+import { Ripple } from '../ui/ripple';
 import { Particles } from "@/components/ui/particles"
 import { BorderBeam } from "@/components/ui/border-beam"
 
