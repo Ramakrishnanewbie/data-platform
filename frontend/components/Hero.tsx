@@ -20,11 +20,13 @@ export default function Hero() {
     ];
 
     const trustedLogosText = [
-        'Startups',
-        'Scale-ups',
-        'Founders',
-        'Global teams',
-        'Creative brands'
+        'Welcome',
+        'To',
+        'Data', 
+        'Platform',
+        '',
+        '',
+        '',
     ];
 
     return (
@@ -99,7 +101,7 @@ export default function Hero() {
                         <div className="relative aspect-16/10 bg-gray-900">
                         <BorderBeam />
                             <img
-                                src="/img.jpg"
+                                src="./image.png"
                                 alt="Hero Image"
                                 className="w-full h-full object-cover object-center"        
                             />

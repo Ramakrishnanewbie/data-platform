@@ -24,9 +24,10 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
     title: {
-        default: "Pixel.io – Digital Agency Template | PrebuiltUI",
-        template: "%s | Pixel.io",
-    }
+        default: "Data Pulse",
+        template: "%s | Data Pulse",
+    },
+    description: "Data Pulse - Your Gateway to Data Excellence",
 };
 
 
@@ -49,7 +50,7 @@ export default function RootLayout({
         
         <html lang="en">
             <ScrollProgress />
-            <body>
+            <body className={`${outfit.variable} ${geistSans.variable} ${geistMono.variable}`}>
                     <SoftBackdrop />
                     <LenisScroll />
                     {children}
