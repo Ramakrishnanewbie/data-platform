@@ -35,17 +35,6 @@ type Group = {
 export function getMenuList(pathname: string): Group[] {
   return [
     {
-      groupLabel: "",
-      menus: [
-        {
-          href: "/dashboard",
-          label: "Dashboard",
-          icon: LayoutGrid,
-          active: pathname === "/dashboard"
-        }
-      ]
-    },
-    {
       groupLabel: "Data Platform",
       menus: [
         {
@@ -72,12 +61,7 @@ export function getMenuList(pathname: string): Group[] {
           icon: MessageSquare,
           active: pathname.startsWith("/aichat")
         },
-        {
-          href: "/bi-analytics",
-          label: "BI Analytics",
-          icon: BarChart3,
-          active: pathname.startsWith("/bianalytics")
-        }
+        
       ]
     }
   ];

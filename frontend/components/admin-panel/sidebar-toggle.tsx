@@ -14,7 +14,7 @@ export function SidebarToggle({ isOpen, setIsOpen }: SidebarToggleProps) {
       <Button
         onClick={() => setIsOpen?.()}
         className="rounded-md w-8 h-8"
-        variant="outline"
+        variant="ghost"
         size="icon"
       >
         <ChevronLeft

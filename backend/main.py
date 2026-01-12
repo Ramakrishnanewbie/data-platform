@@ -1,19 +1,13 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-app=FastAPI(
-    title="Backend for Data Platform",
-    description="This is the backend service for the Data Platform application.",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
+app = FastAPI(title="Data Platform API")
 
 
 @app.get("/")
-def root():
-    return {"message": "Welcome to the Data Platform Backend!"} 
+async def root():
+    return {"message": "Data Platform API"}
 
 @app.get("/health")
-def health_check():
+async def health():
     return {"status": "healthy"}
-

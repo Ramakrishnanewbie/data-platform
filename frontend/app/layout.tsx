@@ -16,6 +16,7 @@ import {
   UserButton,
 } from '@clerk/nextjs'
 import { Particles } from "@/components/ui/particles";
+import { ThemeProvider } from "@/components/providers/theme-provider";
 
 
 const outfit = Outfit({
@@ -52,9 +53,11 @@ export default function RootLayout({
         <html lang="en">
             <ScrollProgress />
             <body className={`${outfit.variable} ${geistSans.variable} ${geistMono.variable}`}>
+            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
             <SoftBackdrop />
             <LenisScroll />
             {children}        
+            </ThemeProvider>
             </body>
         </html>
     );
