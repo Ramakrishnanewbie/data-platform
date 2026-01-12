@@ -5,7 +5,12 @@ import {
   Bookmark,
   SquarePen,
   LayoutGrid,
-  LucideIcon
+  LucideIcon,
+  Database,
+  GitBranch,
+  BookOpen,
+  MessageSquare,
+  BarChart3
 } from "lucide-react";
 
 type Submenu = {
@@ -36,52 +41,42 @@ export function getMenuList(pathname: string): Group[] {
           href: "/dashboard",
           label: "Dashboard",
           icon: LayoutGrid,
-          submenus: []
+          active: pathname === "/dashboard"
         }
       ]
     },
     {
-      groupLabel: "Contents",
+      groupLabel: "Data Platform",
       menus: [
         {
-          href: "",
-          label: "Posts",
-          icon: SquarePen,
-          submenus: [
-            {
-              href: "/posts",
-              label: "All Posts"
-            },
-            {
-              href: "/posts/new",
-              label: "New Post"
-            }
-          ]
+          href: "/sql",
+          label: "SQL",
+          icon: Database,
+          active: pathname.startsWith("/sql")
         },
         {
-          href: "/categories",
-          label: "Categories",
-          icon: Bookmark
+          href: "/data-lineage",
+          label: "Data Lineage",
+          icon: GitBranch,
+          active: pathname.startsWith("/datalineage")
         },
         {
-          href: "/tags",
-          label: "Tags",
-          icon: Tag
-        }
-      ]
-    },
-    {
-      groupLabel: "Settings",
-      menus: [
-        {
-          href: "/users",
-          label: "Users",
-          icon: Users
+          href: "/data-catalog",
+          label: "Data Catalog",
+          icon: BookOpen,
+          active: pathname.startsWith("/datacatalog")
         },
         {
-          href: "/account",
-          label: "Account",
-          icon: Settings
+          href: "/ai-chat",
+          label: "AI Chat",
+          icon: MessageSquare,
+          active: pathname.startsWith("/aichat")
+        },
+        {
+          href: "/bi-analytics",
+          label: "BI Analytics",
+          icon: BarChart3,
+          active: pathname.startsWith("/bianalytics")
         }
       ]
     }

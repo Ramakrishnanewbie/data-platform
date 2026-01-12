@@ -7,6 +7,7 @@ import { useStore } from "@/hooks/use-store";
 import { cn } from "@/lib/utils";
 import { PanelsTopLeft } from "lucide-react";
 import Link from "next/link";
+import { ProjectSelector } from "@/components/custom/project-selector";
 
 export function Sidebar() {
   const sidebar = useStore(useSidebar, (x) => x);
@@ -24,31 +25,32 @@ export function Sidebar() {
       <div
         onMouseEnter={() => setIsHover(true)}
         onMouseLeave={() => setIsHover(false)}
-        className="relative h-full flex flex-col px-3 py-4 overflow-y-auto shadow-md dark:shadow-zinc-800"
+        className="relative h-full flex flex-col px-3 py-4 shadow-md dark:shadow-zinc-800"
       >
+        {/* Logo/Brand */}
         <Button
           className={cn(
-            "transition-transform ease-in-out duration-300 mb-1",
+            "transition-transform ease-in-out duration-300 mb-4 flex-shrink-0",
             !getOpenState() ? "translate-x-1" : "translate-x-0"
           )}
           variant="link"
           asChild
         >
           <Link href="/dashboard" className="flex items-center gap-2">
-            <PanelsTopLeft className="w-6 h-6 mr-1" />
-            <h1
-              className={cn(
-                "font-bold text-lg whitespace-nowrap transition-[transform,opacity,display] ease-in-out duration-300",
-                !getOpenState()
-                  ? "-translate-x-96 opacity-0 hidden"
-                  : "translate-x-0 opacity-100"
-              )}
-            >
-              Brand
-            </h1>
+            <PanelsTopLeft className="w-6 h-6" />
+            {getOpenState() && <span className="font-semibold text-lg">Data Platform</span>}
           </Link>
         </Button>
+        
+        {/* Project/Team Selector */}
+        <div className="flex-shrink-0">
+          <ProjectSelector isOpen={getOpenState()} />
+        </div>
+        
+        {/* Navigation Menu - Scrollable */}
+        <div className="flex-1 min-h-0 overflow-y-auto -mx-3 px-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <Menu isOpen={getOpenState()} />
+        </div>
       </div>
     </aside>
   );
