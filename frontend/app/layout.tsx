@@ -7,14 +7,7 @@ import LenisScroll from "@/components/prebuilt/lenis";
 import { Metadata } from "next";
 import { Geist, Geist_Mono } from 'next/font/google';
 import {ScrollProgress} from "@/components/ui/scroll-progress";
-import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-} from '@clerk/nextjs'
+import { ClerkProvider } from '@clerk/nextjs'
 import { Particles } from "@/components/ui/particles";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 
@@ -32,7 +25,6 @@ export const metadata: Metadata = {
     description: "Data Pulse - Your Gateway to Data Excellence",
 };
 
-
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -49,16 +41,16 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        
-        <html lang="en">
-            <ScrollProgress />
-            <body className={`${outfit.variable} ${geistSans.variable} ${geistMono.variable}`}>
-            <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-            <SoftBackdrop />
-            <LenisScroll />
-            {children}        
-            </ThemeProvider>
-            </body>
-        </html>
+            <html lang="en" suppressHydrationWarning>
+                <body className={`${outfit.variable} ${geistSans.variable} ${geistMono.variable}`}>
+                    <ScrollProgress />
+                    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+                        <SoftBackdrop />
+                        <LenisScroll />
+                        {children}        
+                    </ThemeProvider>
+                </body>
+            </html>
+
     );
 }
