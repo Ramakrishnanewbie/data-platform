@@ -1,4 +1,4 @@
-// TableCard.tsx - POLISHED
+
 import { Button } from "@/components/ui/button";
 import { Table2, X } from "lucide-react";
 import { SelectedTable } from "../hooks/useQueryBuilder";

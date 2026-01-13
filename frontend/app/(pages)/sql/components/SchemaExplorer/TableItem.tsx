@@ -1,4 +1,4 @@
-// TableItem.tsx - POLISHED
+
 import { Table2 } from "lucide-react";
 import { BigQueryTable } from "../hooks/useBigQuerySchema";
 

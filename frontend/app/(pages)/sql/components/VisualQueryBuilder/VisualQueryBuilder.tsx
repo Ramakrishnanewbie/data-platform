@@ -1,4 +1,4 @@
-// VisualQueryBuilder.tsx - POLISHED
+
 import { Button } from "@/components/ui/button";
 import { SelectedTable } from "../hooks/useQueryBuilder";
 import { TableCard } from "./TableCard";

@@ -1,12 +1,14 @@
-// app/(pages)/sql/components/hooks/useQueryHistory.ts
+
 import { useState, useEffect } from 'react';
 
 export interface QueryHistoryItem {
   id: string;
   sql: string;
-  timestamp: Date;
+  query: string; 
+  timestamp: Date | number; 
   executionTime?: number;
   rowCount?: number;
+  error?: boolean; 
 }
 
 export interface SavedQuery {
@@ -35,13 +37,21 @@ export const useQueryHistory = () => {
     }
   }, []);
 
-  const addToHistory = (sql: string, executionTime?: number, rowCount?: number) => {
+  const addToHistory = (
+    sql: string, 
+    executionTime?: number, 
+    rowCount?: number,
+    hasError?: boolean
+  ) => {
+    const timestamp = Date.now();
     const newItem: QueryHistoryItem = {
-      id: Date.now().toString(),
+      id: timestamp.toString(),
       sql,
-      timestamp: new Date(),
+      query: sql, // Alias for compatibility
+      timestamp,
       executionTime,
       rowCount,
+      error: hasError || false,
     };
 
     const updatedHistory = [newItem, ...history].slice(0, 50); // Keep last 50

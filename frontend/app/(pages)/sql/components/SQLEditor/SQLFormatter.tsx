@@ -1,4 +1,4 @@
-// SQLFormatter.tsx - POLISHED
+
 "use client";
 import { Button } from '@/components/ui/button';
 import { Code } from 'lucide-react';
