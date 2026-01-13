@@ -1,3 +1,4 @@
+// DatasetItem.tsx - POLISHED
 import { useState } from "react";
 import { Database, ChevronRight, ChevronDown } from "lucide-react";
 import {
@@ -17,17 +18,17 @@ export const DatasetItem = ({ dataset, onTableDragStart }: DatasetItemProps) => 
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-2">
-      <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 hover:bg-slate-800 rounded text-sm">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-1.5">
+      <CollapsibleTrigger className="flex items-center gap-2 w-full p-2 hover:bg-slate-800 rounded-md text-sm transition-colors">
         {isOpen ? (
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
         ) : (
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
         )}
-        <Database className="h-4 w-4 text-blue-400" />
-        <span className="text-slate-300">{dataset.name}</span>
+        <Database className="h-3.5 w-3.5 text-blue-400" />
+        <span className="text-sm text-slate-300">{dataset.name}</span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pl-6 mt-1">
+      <CollapsibleContent className="pl-5 mt-1 space-y-0.5">
         {dataset.tables.map((table) => (
           <TableItem
             key={table.name}

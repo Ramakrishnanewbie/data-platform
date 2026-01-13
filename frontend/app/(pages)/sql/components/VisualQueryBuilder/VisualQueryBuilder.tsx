@@ -1,4 +1,4 @@
-// app/(pages)/sql/components/VisualQueryBuilder/VisualQueryBuilder.tsx - NO SCROLL, SMOOTH
+// VisualQueryBuilder.tsx - POLISHED
 import { Button } from "@/components/ui/button";
 import { SelectedTable } from "../hooks/useQueryBuilder";
 import { TableCard } from "./TableCard";
@@ -20,27 +20,27 @@ export const VisualQueryBuilder = ({
 }: VisualQueryBuilderProps) => {
   return (
     <div
-      className="rounded-lg p-2 bg-slate-950/30 border border-slate-800"
+      className="rounded-lg p-2.5 bg-slate-950/30 border border-slate-800"
       onDragOver={(e) => e.preventDefault()}
       onDrop={onTableDrop}
     >
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold text-slate-200">
+        <h3 className="text-sm font-semibold text-slate-200">
           Visual Query Builder
         </h3>
         {selectedTables.length > 0 && (
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={onClearAll} className="h-7 text-xs">
+          <div className="flex gap-1.5">
+            <Button size="sm" variant="outline" onClick={onClearAll} className="h-7 text-xs px-2.5">
               Clear All
             </Button>
-            <Button size="sm" onClick={onGenerateSQL} className="h-7 text-xs">
+            <Button size="sm" onClick={onGenerateSQL} className="h-7 text-xs px-2.5">
               Generate SQL
             </Button>
           </div>
         )}
       </div>
 
-      <div className="flex gap-2 flex-nowrap overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900 min-h-[60px]">
+      <div className="flex gap-2.5 flex-nowrap overflow-x-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900 min-h-[70px] pb-1">
         {selectedTables.map((table, idx) => (
           <TableCard
             key={idx}
@@ -50,7 +50,7 @@ export const VisualQueryBuilder = ({
           />
         ))}
         {selectedTables.length === 0 && (
-          <div className="text-center w-full text-slate-500 py-4 text-xs">
+          <div className="flex-1 flex items-center justify-center text-sm text-slate-500">
             Drag tables here to build your query
           </div>
         )}

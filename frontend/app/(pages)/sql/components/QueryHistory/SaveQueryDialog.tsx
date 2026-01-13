@@ -1,4 +1,4 @@
-// app/(pages)/sql/components/QueryHistory/SaveQueryDialog.tsx
+// SaveQueryDialog.tsx - POLISHED
 "use client";
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -41,38 +41,38 @@ export const SaveQueryDialog = ({ sql }: SaveQueryDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-2">
-          <Save className="h-3 w-3" />
-          Save Query
+        <Button size="sm" variant="outline" className="gap-1.5 h-8">
+          <Save className="h-3.5 w-3.5" />
+          <span className="text-sm">Save</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-slate-900 border-slate-700">
+      <DialogContent className="bg-slate-900 border-slate-700 sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Save Query</DialogTitle>
+          <DialogTitle className="text-base">Save Query</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="name">Query Name</Label>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-sm">Query Name</Label>
             <Input
               id="name"
               placeholder="e.g., Top Customers by Revenue"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-slate-800 border-slate-700"
+              className="h-9 text-sm bg-slate-800 border-slate-700"
             />
           </div>
-          <div>
-            <Label htmlFor="tags">Tags (comma-separated)</Label>
+          <div className="space-y-2">
+            <Label htmlFor="tags" className="text-sm">Tags (comma-separated)</Label>
             <Input
               id="tags"
               placeholder="e.g., sales, reporting, monthly"
               value={tags}
               onChange={(e) => setTags(e.target.value)}
-              className="bg-slate-800 border-slate-700"
+              className="h-9 text-sm bg-slate-800 border-slate-700"
             />
           </div>
-          <Button onClick={handleSave} className="w-full">
-            Save
+          <Button onClick={handleSave} className="w-full h-9 text-sm">
+            Save Query
           </Button>
         </div>
       </DialogContent>

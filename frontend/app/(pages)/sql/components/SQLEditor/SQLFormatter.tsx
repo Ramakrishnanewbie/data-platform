@@ -1,4 +1,4 @@
-// app/(pages)/sql/components/SQLEditor/SQLFormatter.tsx
+// SQLFormatter.tsx - POLISHED
 "use client";
 import { Button } from '@/components/ui/button';
 import { Code } from 'lucide-react';
@@ -24,9 +24,9 @@ export const SQLFormatter = ({ sql, onFormat }: SQLFormatterProps) => {
   };
 
   return (
-    <Button size="sm" variant="outline" onClick={handleFormat} className="gap-2">
-      <Code className="h-3 w-3" />
-      Format SQL
+    <Button size="sm" variant="outline" onClick={handleFormat} className="gap-1.5 h-8">
+      <Code className="h-3.5 w-3.5" />
+      <span className="text-sm">Format</span>
     </Button>
   );
 };

@@ -1,3 +1,4 @@
+/* styles.css - POLISHED VERSION */
 @import 'tailwindcss';
 @import "tw-animate-css";
 
@@ -7,13 +8,10 @@
     --font-sans: 'Outfit', sans-serif;
 }
 
-
-
 body {
   overflow-x: hidden;
   overflow-y: hidden;
 }
-
 
 @layer base {
     body {
@@ -127,7 +125,7 @@ body {
 }
 
 :root {
-    --radius: 0.625rem;
+    --radius: 0.5rem;  /* Reduced from 0.625rem for tighter look */
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);
@@ -202,19 +200,18 @@ body {
 }
 
 .hide-scrollbar {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 
-
-/* Add to app/globals.css */
+/* Thin scrollbars - polished */
 .scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
@@ -222,12 +219,12 @@ body {
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 3px;
+  background: #334155;
+  border-radius: 2.5px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
+  background: #475569;
 }
 
 .scrollbar-track-slate-900::-webkit-scrollbar-track {
@@ -236,4 +233,47 @@ body {
 
 .scrollbar-thumb-slate-700::-webkit-scrollbar-thumb {
   background: #334155;
+}
+
+/* SQL Editor Design System */
+:root {
+  /* Consistent spacing */
+  --sql-spacing-tight: 0.375rem;  /* 6px */
+  --sql-spacing-base: 0.625rem;   /* 10px */
+  --sql-spacing-loose: 0.75rem;   /* 12px */
+  
+  /* Consistent heights */
+  --sql-button-sm: 1.75rem;   /* 28px / h-7 */
+  --sql-button-md: 2rem;      /* 32px / h-8 */
+  
+  /* Consistent icons */
+  --sql-icon-size: 0.875rem;  /* 14px / h-3.5 w-3.5 */
+}
+
+/* Apply consistent styles to SQL page */
+.sql-toolbar-btn {
+  @apply h-8 px-3 text-sm gap-1.5;
+}
+
+.sql-panel-header {
+  @apply text-sm font-semibold text-slate-200;
+}
+
+.sql-panel-text {
+  @apply text-sm text-slate-300;
+}
+
+.sql-secondary-text {
+  @apply text-xs text-slate-400;
+}
+
+.sql-icon {
+  @apply h-3.5 w-3.5;
+}
+
+/* Consistent transitions */
+@layer utilities {
+  .transition-smooth {
+    @apply transition-all duration-200 ease-in-out;
+  }
 }

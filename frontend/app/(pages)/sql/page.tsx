@@ -1,6 +1,6 @@
-// app/(pages)/sql/page.tsx - FULL CODE WITH COMBINED TOOLBAR
+// app/(pages)/sql/page.tsx - DYNAMIC HEIGHT ADJUSTMENT
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ContentLayout } from "@/components/admin-panel/content-layout";
 import {
   ResizableHandle,
@@ -26,6 +26,8 @@ import { useQueryHistory } from "./components/hooks/useQueryHistory";
 export default function SQLPage() {
   const [query, setQuery] = useState("SELECT * FROM `project.dataset.table` LIMIT 10;");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const queryBuilderRef = useRef<HTMLDivElement>(null);
+  const [queryBuilderHeight, setQueryBuilderHeight] = useState(0);
   
   const { selectedTables, addTable, removeTable, clearTables, generateSQL } = useQueryBuilder();
   const { results, loading, error, executeQuery, clearResults } = useBigQueryExecute();
@@ -39,6 +41,14 @@ export default function SQLPage() {
       `Dataset: ${ds.name}\nTables: ${ds.tables.map((t) => t.name).join(', ')}`
     )
     .join('\n\n');
+
+  // Measure query builder height and adjust layout
+  useEffect(() => {
+    if (queryBuilderRef.current) {
+      const height = queryBuilderRef.current.scrollHeight;
+      setQueryBuilderHeight(height);
+    }
+  }, [selectedTables]);
 
   const handleTableDragStart = (e: React.DragEvent, dataset: string, table: any) => {
     e.dataTransfer.setData("table", JSON.stringify({ dataset, ...table }));
@@ -70,16 +80,19 @@ export default function SQLPage() {
     clearResults();
   };
 
+  // Calculate spacing based on query builder content
+  const hasOverflow = queryBuilderHeight > 150;
+  const editorTopPadding = hasOverflow ? 'pt-3' : 'pt-2';
+
   return (
     <ContentLayout title="SQL Editor">
       <div className="h-[calc(100vh-8rem)]">
         <ResizablePanelGroup direction="vertical" className="h-full">
-          {/* Top: Editor Area */}
           <ResizablePanel defaultSize={showResults ? 60 : 100} minSize={30}>
-            <div className="h-full flex gap-2 p-2">
+            <div className="h-full flex gap-3 p-3">
               {/* Left Sidebar */}
               {!sidebarCollapsed ? (
-                <div className="w-[280px] flex-shrink-0">
+                <div className="w-[260px] flex-shrink-0">
                   <SchemaExplorer
                     collapsed={sidebarCollapsed}
                     onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -87,12 +100,12 @@ export default function SQLPage() {
                   />
                 </div>
               ) : (
-                <div className="w-12 flex-shrink-0 border rounded-lg bg-slate-950 flex items-start justify-center pt-4">
+                <div className="w-12 flex-shrink-0 border rounded-lg bg-slate-950 flex items-start justify-center pt-3">
                   <Button
                     size="icon"
                     variant="ghost"
                     onClick={() => setSidebarCollapsed(false)}
-                    className="h-8 w-8"
+                    className="h-7 w-7"
                   >
                     <PanelLeft className="h-4 w-4" />
                   </Button>
@@ -100,73 +113,70 @@ export default function SQLPage() {
               )}
 
               {/* Main Content */}
-              <div className="flex-1 min-w-0">
-                <ResizablePanelGroup direction="vertical">
-                  {/* AI Input + Query Builder */}
-                  <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
-                    <div className="h-full flex flex-col gap-2 overflow-hidden">
-                      <div className="flex-shrink-0">
-                        <AIQueryInput
-                          onQueryGenerated={setQuery}
-                          schema={schemaContext}
-                        />
-                      </div>
-                      <div className="flex-1 min-h-0">
-                        <VisualQueryBuilder
-                          selectedTables={selectedTables}
-                          onTableDrop={handleTableDrop}
-                          onRemoveTable={removeTable}
-                          onClearAll={clearTables}
-                          onGenerateSQL={handleGenerateSQL}
-                        />
-                      </div>
-                    </div>
-                  </ResizablePanel>
+              <div className="flex-1 min-w-0 flex flex-col gap-0">
+                {/* AI Query Input */}
+                <div className="flex-shrink-0 mb-2.5">
+                  <AIQueryInput
+                    onQueryGenerated={setQuery}
+                    schema={schemaContext}
+                  />
+                </div>
 
-                  <ResizableHandle withHandle />
+                {/* Visual Query Builder - Dynamic height */}
+                <div 
+                  ref={queryBuilderRef}
+                  className="flex-shrink-0 transition-all duration-300 ease-out"
+                  style={{
+                    marginBottom: hasOverflow ? '12px' : '8px'
+                  }}
+                >
+                  <VisualQueryBuilder
+                    selectedTables={selectedTables}
+                    onTableDrop={handleTableDrop}
+                    onRemoveTable={removeTable}
+                    onClearAll={clearTables}
+                    onGenerateSQL={handleGenerateSQL}
+                  />
+                </div>
 
-                  {/* SQL Editor */}
-                  <ResizablePanel defaultSize={75} minSize={40}>
-                    <div className="h-full relative">
-                      {/* Editor without Run button */}
-                      <div className="h-full border rounded-lg overflow-hidden relative bg-slate-950">
-                        <SQLEditor
-                          value={query}
-                          onChange={setQuery}
-                          onExecute={handleExecuteQuery}
-                          loading={loading}
-                        />
-                      </div>
+                {/* SQL Editor - Takes remaining space */}
+                <div className={`flex-1 relative min-h-0 ${editorTopPadding} transition-all duration-300`}>
+                  <div className="h-full border rounded-lg overflow-hidden bg-slate-950">
+                    <SQLEditor
+                      value={query}
+                      onChange={setQuery}
+                      onExecute={handleExecuteQuery}
+                      loading={loading}
+                    />
+                  </div>
 
-                      {/* Combined Toolbar with ALL buttons including Run Query */}
-                      <div className="absolute top-4 right-4 z-10 flex gap-2">
-                        <SQLFormatter sql={query} onFormat={setQuery} />
-                        <QueryExplanation sql={query} />
-                        <SaveQueryDialog sql={query} />
-                        <QueryHistoryPanel onSelectQuery={setQuery} />
-                        
-                        {/* Run Query Button */}
-                        <Button
-                          onClick={handleExecuteQuery}
-                          disabled={loading || !query.trim()}
-                          className="gap-2 shadow-lg"
-                        >
-                          {loading ? (
-                            <>
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                              Running...
-                            </>
-                          ) : (
-                            <>
-                              <Play className="h-2 w-2" />
-                              Run Query
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </ResizablePanel>
-                </ResizablePanelGroup>
+                  {/* Toolbar */}
+                  <div className="absolute top-5 right-3 z-10 flex gap-2">
+                    <SQLFormatter sql={query} onFormat={setQuery} />
+                    <QueryExplanation sql={query} />
+                    <SaveQueryDialog sql={query} />
+                    <QueryHistoryPanel onSelectQuery={setQuery} />
+                    
+                    <Button
+                      onClick={handleExecuteQuery}
+                      disabled={loading || !query.trim()}
+                      size="sm"
+                      className="gap-1.5 shadow-lg h-8"
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <span className="text-sm">Running...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-3.5 w-3.5" />
+                          <span className="text-sm">Run</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </ResizablePanel>
