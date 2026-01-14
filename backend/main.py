@@ -1,4 +1,4 @@
-# backend/main.py - USE VERTEX AI INSTEAD
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -11,6 +11,7 @@ from datetime import date, datetime
 from decimal import Decimal
 import os
 from dotenv import load_dotenv
+from routers import bq_lineage
 
 # Load environment variables
 load_dotenv()
@@ -25,6 +26,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Clients
 bq_client = bigquery.Client()
@@ -243,3 +245,7 @@ Focus on BigQuery-specific optimizations like partitioning, clustering, avoiding
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Vertex AI error: {str(e)}")
+    
+    
+
+app.include_router(bq_lineage.router, prefix="/api", tags=["bigquery"])
