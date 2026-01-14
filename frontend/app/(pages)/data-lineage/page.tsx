@@ -1,9 +1,11 @@
 "use client"
 
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import dynamic from 'next/dynamic'
 import {ContentLayout} from '@/components/admin-panel/content-layout'
-import AssetBrowser from '@/app/(pages)/data-lineage/components/asset-browser'
-import LineageGraph from '@/app/(pages)/data-lineage/components/lineage-graph'
+import ExportMenu from '@/app/(pages)/data-lineage/components/export-menu'
+import LineageSummary from '@/app/(pages)/data-lineage/components/lineage-summary'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -15,7 +17,79 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import { GitBranch, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Download } from 'lucide-react'
+import { GitBranch, ArrowUpCircle, ArrowDownCircle, ArrowLeftRight, Target } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+
+const AssetBrowser = dynamic(() => import('@/app/(pages)/data-lineage/components/asset-browser'), {
+  loading: () => <AssetBrowserSkeleton />,
+  ssr: false,
+})
+
+const LineageGraph = dynamic(() => import('@/app/(pages)/data-lineage/components/lineage-graph'), {
+  loading: () => <LineageGraphSkeleton />,
+  ssr: false,
+})
+
+const MetadataPanel = dynamic(() => import('@/app/(pages)/data-lineage/components/metadata-panel'), {
+  loading: () => <div>Loading metadata...</div>,
+  ssr: false,
+})
+
+const ImpactAnalysis = dynamic(() => import('@/app/(pages)/data-lineage/components/impact-analysis'), {
+  loading: () => <div>Loading impact analysis...</div>,
+  ssr: false,
+})
+
+const EdgeDetailsPanel = dynamic(() => import('@/app/(pages)/data-lineage/components/edge-details'), {
+  loading: () => <div>Loading edge details...</div>,
+  ssr: false,
+})
+
+function AssetBrowserSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        <Skeleton className="h-10 flex-1" />
+        <Skeleton className="h-10 w-[180px]" />
+      </div>
+      <div className="space-y-2">
+        {[...Array(8)].map((_, i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function LineageGraphSkeleton() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="text-center space-y-4">
+        <div className="animate-pulse space-y-2">
+          <div className="h-16 w-16 bg-muted rounded-full mx-auto" />
+          <div className="h-4 w-32 bg-muted rounded mx-auto" />
+        </div>
+        <p className="text-muted-foreground">Loading graph...</p>
+      </div>
+    </div>
+  )
+}
+
+async function fetchLineage(
+  projectId: string,
+  datasetId: string,
+  assetName: string,
+  direction: string,
+  depth: number
+) {
+  const response = await fetch(
+    `/api/bigquery/lineage/${projectId}/${datasetId}/${assetName}?direction=${direction}&depth=${depth}`
+  )
+  if (!response.ok) throw new Error('Failed to fetch lineage')
+  return response.json()
+}
+
+type PanelType = 'metadata' | 'impact' | 'edge' | null
 
 export default function DataLineagePage() {
   const [selectedAsset, setSelectedAsset] = useState<{
@@ -25,67 +99,90 @@ export default function DataLineagePage() {
     assetType: string
   } | null>(null)
   
+  const [selectedNode, setSelectedNode] = useState<{
+    projectId: string
+    datasetId: string
+    tableName: string
+  } | null>(null)
+
+  const [selectedEdge, setSelectedEdge] = useState<{
+    sourceTable: string
+    targetTable: string
+  } | null>(null)
+
+  const [activePanel, setActivePanel] = useState<PanelType>(null)
+  
   const [direction, setDirection] = useState<'upstream' | 'downstream' | 'both'>('both')
   const [depth, setDepth] = useState([3])
-  const [lineageData, setLineageData] = useState<any>(null)
-  const [loading, setLoading] = useState(false)
 
-  const handleAssetSelect = async (
+  const { 
+    data: lineageData, 
+    isLoading, 
+    isError,
+    isFetching
+  } = useQuery({
+    queryKey: ['lineage', selectedAsset?.projectId, selectedAsset?.datasetId, selectedAsset?.assetName, direction, depth[0]],
+    queryFn: () => fetchLineage(
+      selectedAsset!.projectId,
+      selectedAsset!.datasetId,
+      selectedAsset!.assetName,
+      direction,
+      depth[0]
+    ),
+    enabled: !!selectedAsset,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  })
+
+  const handleAssetSelect = (
     projectId: string,
     datasetId: string,
     assetName: string,
     assetType: string
   ) => {
     setSelectedAsset({ projectId, datasetId, assetName, assetType })
-    
-    // Fetch lineage data
-    setLoading(true)
-    try {
-      const response = await fetch(
-        `/api/bigquery/lineage/${projectId}/${datasetId}/${assetName}?direction=${direction}&depth=${depth[0]}`
-      )
-      const data = await response.json()
-      setLineageData(data)
-    } catch (error) {
-      console.error('Error fetching lineage:', error)
-    } finally {
-      setLoading(false)
-    }
+    setActivePanel(null) // Close all panels when switching assets
   }
 
-  const handleDirectionChange = async (newDirection: 'upstream' | 'downstream' | 'both') => {
+  const handleDirectionChange = (newDirection: 'upstream' | 'downstream' | 'both') => {
     setDirection(newDirection)
-    if (selectedAsset) {
-      await handleAssetSelect(
-        selectedAsset.projectId,
-        selectedAsset.datasetId,
-        selectedAsset.assetName,
-        selectedAsset.assetType
-      )
-    }
   }
 
-  const handleDepthChange = async (newDepth: number[]) => {
+  const handleDepthChange = (newDepth: number[]) => {
     setDepth(newDepth)
+  }
+
+  const handleNodeClick = (projectId: string, datasetId: string, tableName: string) => {
+    setSelectedNode({ projectId, datasetId, tableName })
+    setActivePanel('metadata')
+  }
+
+  const handleEdgeClick = (sourceTable: string, targetTable: string) => {
+    console.log('🔗 Edge clicked:', sourceTable, '→', targetTable)
+    setSelectedEdge({ sourceTable, targetTable })
+    setActivePanel('edge')
+  }
+
+  const handleShowImpact = () => {
     if (selectedAsset) {
-      await handleAssetSelect(
-        selectedAsset.projectId,
-        selectedAsset.datasetId,
-        selectedAsset.assetName,
-        selectedAsset.assetType
-      )
+      setSelectedNode({
+        projectId: selectedAsset.projectId,
+        datasetId: selectedAsset.datasetId,
+        tableName: selectedAsset.assetName,
+      })
+      setActivePanel('impact')
     }
   }
 
-  const handleExportGraph = () => {
-    // TODO: Implement export to PNG/SVG
-    console.log('Exporting graph...')
+  const handleClosePanel = () => {
+    setActivePanel(null)
+    setSelectedNode(null)
+    setSelectedEdge(null)
   }
 
   return (
     <ContentLayout title="Data Lineage">
       <div className="space-y-4">
-        {/* Header with Controls */}
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h2 className="text-2xl font-bold tracking-tight">Data Lineage Explorer</h2>
@@ -94,15 +191,31 @@ export default function DataLineagePage() {
             </p>
           </div>
           
-          {selectedAsset && (
-            <Button variant="outline" onClick={handleExportGraph}>
-              <Download className="h-4 w-4 mr-2" />
-              Export Graph
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {selectedAsset && lineageData && (
+              <>
+                <Button variant="outline" onClick={handleShowImpact}>
+                  <Target className="h-4 w-4 mr-2" />
+                  Impact Analysis
+                </Button>
+                <ExportMenu 
+                  nodes={lineageData.nodes} 
+                  edges={lineageData.edges}
+                  selectedAsset={selectedAsset}
+                />
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Selected Asset Info & Controls */}
+        {selectedAsset && lineageData && (
+          <LineageSummary 
+            nodes={lineageData.nodes}
+            edges={lineageData.edges}
+            rootNodeId={lineageData.rootNode}
+          />
+        )}
+
         {selectedAsset && (
           <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
             <div className="flex-1">
@@ -113,12 +226,16 @@ export default function DataLineagePage() {
                   {selectedAsset.projectId}.{selectedAsset.datasetId}.{selectedAsset.assetName}
                 </code>
                 <Badge>{selectedAsset.assetType}</Badge>
+                {isFetching && (
+                  <Badge variant="outline" className="animate-pulse">
+                    Updating...
+                  </Badge>
+                )}
               </div>
             </div>
             
             <Separator orientation="vertical" className="h-8" />
             
-            {/* Direction Control */}
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Direction:</span>
               <Select value={direction} onValueChange={handleDirectionChange}>
@@ -150,7 +267,6 @@ export default function DataLineagePage() {
             
             <Separator orientation="vertical" className="h-8" />
             
-            {/* Depth Control */}
             <div className="flex items-center gap-3 min-w-[200px]">
               <span className="text-sm font-medium">Depth:</span>
               <Slider
@@ -166,9 +282,7 @@ export default function DataLineagePage() {
           </div>
         )}
 
-        {/* Main Content Area - Split View */}
-        <div className="grid grid-cols-12 gap-4 h-[calc(100vh-280px)]">
-          {/* Left Sidebar - Asset Browser */}
+        <div className="grid grid-cols-12 gap-4 h-[calc(100vh-380px)]">
           <div className="col-span-3 border rounded-lg p-4 overflow-hidden">
             <div className="flex items-center gap-2 mb-4">
               <GitBranch className="h-5 w-5" />
@@ -180,7 +294,6 @@ export default function DataLineagePage() {
             />
           </div>
 
-          {/* Right Main Area - Lineage Graph */}
           <div className="col-span-9 border rounded-lg overflow-hidden">
             {!selectedAsset ? (
               <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -190,26 +303,60 @@ export default function DataLineagePage() {
                   Choose a table, view, or materialized view from the asset browser to visualize its lineage and dependencies
                 </p>
               </div>
-            ) : loading ? (
+            ) : isLoading ? (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
                   <p className="text-muted-foreground">Loading lineage graph...</p>
                 </div>
               </div>
+            ) : isError ? (
+              <div className="flex flex-col items-center justify-center h-full gap-4">
+                <p className="text-destructive">Failed to load lineage</p>
+                <Button variant="outline" onClick={() => window.location.reload()}>
+                  Retry
+                </Button>
+              </div>
             ) : lineageData ? (
               <LineageGraph
                 nodes={lineageData.nodes}
                 edges={lineageData.edges}
                 rootNodeId={lineageData.rootNode}
+                onNodeClick={handleNodeClick}
+                onEdgeClick={handleEdgeClick}
               />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-muted-foreground">No lineage data available</p>
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
+
+        {/* Metadata Panel */}
+        {selectedNode && activePanel === 'metadata' && (
+          <MetadataPanel
+            projectId={selectedNode.projectId}
+            datasetId={selectedNode.datasetId}
+            tableId={selectedNode.tableName}
+            onClose={handleClosePanel}
+          />
+        )}
+
+        {/* Impact Analysis Panel */}
+        {selectedNode && activePanel === 'impact' && lineageData && (
+          <ImpactAnalysis
+            nodes={lineageData.nodes}
+            edges={lineageData.edges}
+            selectedNode={selectedNode}
+            onClose={handleClosePanel}
+          />
+        )}
+
+        {/* Edge Details Panel */}
+        {selectedEdge && activePanel === 'edge' && (
+          <EdgeDetailsPanel
+            sourceTable={selectedEdge.sourceTable}
+            targetTable={selectedEdge.targetTable}
+            onClose={handleClosePanel}
+          />
+        )}
       </div>
     </ContentLayout>
   )

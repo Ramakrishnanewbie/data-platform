@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from google.cloud import bigquery
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
 from redis_cache import get_cache, generate_cache_key, TTL_ASSETS, TTL_LINEAGE
@@ -12,6 +12,192 @@ logger = logging.getLogger(__name__)
 def get_bq_client():
     """Dependency to get BigQuery client"""
     return bigquery.Client()
+
+
+@router.get("/bigquery/table-metadata/{project_id}/{dataset_id}/{table_id}")
+async def get_table_metadata(
+    project_id: str,
+    dataset_id: str,
+    table_id: str,
+    client: bigquery.Client = Depends(get_bq_client)
+) -> Dict[str, Any]:
+    """
+    Get comprehensive metadata for a specific table.
+    Includes schema, stats, and table properties.
+    """
+    cache = get_cache()
+    cache_key = generate_cache_key("metadata", project_id, dataset_id, table_id)
+    
+    # Try cache first
+    if cache and cache.is_connected():
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            logger.info(f"✨ Returning cached metadata for {project_id}.{dataset_id}.{table_id}")
+            cached_data["cached"] = True
+            return cached_data
+    
+    logger.info(f"🔄 Fetching fresh metadata for {project_id}.{dataset_id}.{table_id}")
+    
+    try:
+        # Get full table reference
+        table_ref = client.get_table(f"{project_id}.{dataset_id}.{table_id}")
+        
+        # Determine table type
+        table_type = "table"
+        if table_ref.table_type == "VIEW":
+            table_type = "view"
+        elif table_ref.table_type == "MATERIALIZED_VIEW":
+            table_type = "materialized_view"
+        elif table_ref.table_type == "EXTERNAL":
+            table_type = "external"
+        
+        # Build schema information
+        schema = []
+        for field in table_ref.schema:
+            schema.append({
+                "name": field.name,
+                "type": field.field_type,
+                "mode": field.mode,
+                "description": field.description or "",
+            })
+        
+        # Calculate data freshness
+        last_modified = table_ref.modified
+        if last_modified:
+            hours_since_modified = (datetime.now(last_modified.tzinfo) - last_modified).total_seconds() / 3600
+            if hours_since_modified < 24:
+                freshness = "fresh"  # 🟢
+            elif hours_since_modified < 168:  # 7 days
+                freshness = "recent"  # 🟡
+            else:
+                freshness = "stale"  # 🔴
+        else:
+            freshness = "unknown"
+        
+        # Get view definition if it's a view
+        view_query = None
+        if table_type in ["view", "materialized_view"]:
+            view_query = table_ref.view_query or table_ref.mview_query
+        
+        # Get partitioning info
+        partitioning_info = None
+        if table_ref.time_partitioning:
+            partitioning_info = {
+                "type": table_ref.time_partitioning.type_,
+                "field": table_ref.time_partitioning.field,
+                "expiration_ms": table_ref.time_partitioning.expiration_ms
+            }
+        
+        # Get clustering info
+        clustering_fields = table_ref.clustering_fields if table_ref.clustering_fields else []
+        
+        result = {
+            "projectId": project_id,
+            "datasetId": dataset_id,
+            "tableId": table_id,
+            "tableName": table_id,
+            "type": table_type,
+            "schema": schema,
+            "numRows": table_ref.num_rows,
+            "numBytes": table_ref.num_bytes,
+            "createdAt": table_ref.created.isoformat() if table_ref.created else None,
+            "modifiedAt": table_ref.modified.isoformat() if table_ref.modified else None,
+            "freshness": freshness,
+            "description": table_ref.description or "",
+            "labels": dict(table_ref.labels) if table_ref.labels else {},
+            "location": table_ref.location,
+            "viewQuery": view_query,
+            "partitioning": partitioning_info,
+            "clusteringFields": clustering_fields,
+            "expirationTime": table_ref.expires.isoformat() if table_ref.expires else None,
+            "cached": False
+        }
+        
+        # Cache for 6 hours (metadata doesn't change often)
+        if cache and cache.is_connected():
+            cache.set(cache_key, result, ttl=TTL_ASSETS)
+            logger.info(f"💾 Cached table metadata with TTL={TTL_ASSETS}s")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error fetching table metadata: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/bigquery/table-preview/{project_id}/{dataset_id}/{table_id}")
+async def get_table_preview(
+    project_id: str,
+    dataset_id: str,
+    table_id: str,
+    limit: int = 10,
+    client: bigquery.Client = Depends(get_bq_client)
+) -> Dict[str, Any]:
+    """
+    Get a preview of table data (first N rows).
+    """
+    cache = get_cache()
+    cache_key = generate_cache_key("preview", project_id, dataset_id, table_id, limit)
+    
+    # Try cache first
+    if cache and cache.is_connected():
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            logger.info(f"✨ Returning cached preview for {project_id}.{dataset_id}.{table_id}")
+            cached_data["cached"] = True
+            return cached_data
+    
+    logger.info(f"🔄 Fetching fresh preview for {project_id}.{dataset_id}.{table_id}")
+    
+    try:
+        # Query to get preview data
+        query = f"""
+        SELECT *
+        FROM `{project_id}.{dataset_id}.{table_id}`
+        LIMIT {limit}
+        """
+        
+        query_job = client.query(query)
+        results = query_job.result()
+        
+        # Get schema
+        schema = [{"name": field.name, "type": field.field_type} for field in results.schema]
+        
+        # Get rows
+        rows = []
+        for row in results:
+            row_dict = {}
+            for key, value in dict(row).items():
+                # Convert to JSON-serializable format
+                if isinstance(value, datetime):
+                    row_dict[key] = value.isoformat()
+                elif isinstance(value, bytes):
+                    row_dict[key] = value.decode('utf-8', errors='ignore')
+                else:
+                    row_dict[key] = value
+            rows.append(row_dict)
+        
+        result = {
+            "projectId": project_id,
+            "datasetId": dataset_id,
+            "tableId": table_id,
+            "schema": schema,
+            "rows": rows,
+            "totalRows": len(rows),
+            "limit": limit,
+            "cached": False
+        }
+        
+        # Cache for 1 hour (preview can change)
+        if cache and cache.is_connected():
+            cache.set(cache_key, result, ttl=TTL_LINEAGE)
+            logger.info(f"💾 Cached table preview with TTL={TTL_LINEAGE}s")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error fetching table preview: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/bigquery/assets")
@@ -121,20 +307,12 @@ async def get_table_lineage(
     project_id: str,
     dataset_id: str,
     table_id: str,
-    direction: str = "both",  # upstream, downstream, or both
+    direction: str = "both",
     depth: int = 3,
     client: bigquery.Client = Depends(get_bq_client)
 ) -> Dict[str, Any]:
     """
     Get lineage for a specific table using BigQuery job history and table metadata.
-    Uses Redis caching with 1 hour TTL for performance.
-    
-    Args:
-        project_id: GCP project ID
-        dataset_id: BigQuery dataset ID
-        table_id: BigQuery table ID
-        direction: 'upstream' (dependencies), 'downstream' (dependents), or 'both'
-        depth: How many levels to traverse (1-5)
     """
     cache = get_cache()
     cache_key = generate_cache_key(
@@ -224,7 +402,6 @@ async def get_upstream_dependencies(
     nodes = []
     edges = []
     
-    # Query job history for queries that wrote to this table
     try:
         jobs_query = f"""
         SELECT DISTINCT
@@ -271,6 +448,7 @@ async def get_upstream_dependencies(
 
 
 async def get_downstream_dependencies(
+
     client: bigquery.Client,
     project_id: str,
     dataset_id: str,
@@ -281,7 +459,6 @@ async def get_downstream_dependencies(
     nodes = []
     edges = []
     
-    # Query job history to find queries that read from this table
     try:
         jobs_query = f"""
         SELECT DISTINCT
@@ -326,3 +503,109 @@ async def get_downstream_dependencies(
         logger.warning(f"Could not fetch downstream dependencies: {str(e)}")
     
     return {"nodes": nodes, "edges": edges}
+
+
+
+@router.get("/bigquery/edge-query/{source_table}/{target_table}")
+async def get_edge_query(
+    source_table: str,  # Format: project.dataset.table
+    target_table: str,  # Format: project.dataset.table
+    client: bigquery.Client = Depends(get_bq_client)
+) -> Dict[str, Any]:
+    """
+    Get the SQL query that created the relationship between two tables.
+    Searches job history for queries where source was read and target was written.
+    """
+    cache = get_cache()
+    cache_key = generate_cache_key("edge-query", source_table, target_table)
+    
+    # Try cache first
+    if cache and cache.is_connected():
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            logger.info(f"✨ Returning cached edge query for {source_table} → {target_table}")
+            cached_data["cached"] = True
+            return cached_data
+    
+    logger.info(f"🔄 Fetching edge query for {source_table} → {target_table}")
+    
+    try:
+        # Parse table names
+        source_parts = source_table.split('.')
+        target_parts = target_table.split('.')
+        
+        if len(source_parts) != 3 or len(target_parts) != 3:
+            raise HTTPException(status_code=400, detail="Invalid table format. Use: project.dataset.table")
+        
+        source_project, source_dataset, source_table_name = source_parts
+        target_project, target_dataset, target_table_name = target_parts
+        
+        # Query to find the job that created this relationship
+        jobs_query = f"""
+        SELECT 
+            query,
+            job_id,
+            user_email,
+            start_time,
+            end_time,
+            total_bytes_processed,
+            total_slot_ms,
+            statement_type,
+            TIMESTAMP_DIFF(end_time, start_time, MILLISECOND) as duration_ms
+        FROM `region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT,
+        UNNEST(referenced_tables) as referenced_tables
+        WHERE referenced_tables.project_id = '{source_project}'
+        AND referenced_tables.dataset_id = '{source_dataset}'
+        AND referenced_tables.table_id = '{source_table_name}'
+        AND destination_table.project_id = '{target_project}'
+        AND destination_table.dataset_id = '{target_dataset}'
+        AND destination_table.table_id = '{target_table_name}'
+        AND statement_type IN ('INSERT', 'CREATE_TABLE_AS_SELECT', 'MERGE', 'UPDATE')
+        ORDER BY end_time DESC
+        LIMIT 1
+        """
+        
+        query_job = client.query(jobs_query)
+        results = list(query_job.result())
+        
+        if not results:
+            return {
+                "sourceTable": source_table,
+                "targetTable": target_table,
+                "query": None,
+                "message": "No query found for this relationship",
+                "cached": False
+            }
+        
+        row = results[0]
+        
+        # Calculate cost estimate (rough estimate: $5 per TB)
+        bytes_processed = row.total_bytes_processed or 0
+        cost_estimate = (bytes_processed / (1024 ** 4)) * 5  # $5 per TB
+        
+        result = {
+            "sourceTable": source_table,
+            "targetTable": target_table,
+            "query": row.query,
+            "jobId": row.job_id,
+            "userEmail": row.user_email,
+            "startTime": row.start_time.isoformat() if row.start_time else None,
+            "endTime": row.end_time.isoformat() if row.end_time else None,
+            "durationMs": row.duration_ms,
+            "bytesProcessed": bytes_processed,
+            "totalSlotMs": row.total_slot_ms,
+            "statementType": row.statement_type,
+            "costEstimate": round(cost_estimate, 4),
+            "cached": False
+        }
+        
+        # Cache for 1 hour
+        if cache and cache.is_connected():
+            cache.set(cache_key, result, ttl=TTL_LINEAGE)
+            logger.info(f"💾 Cached edge query with TTL={TTL_LINEAGE}s")
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error fetching edge query: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

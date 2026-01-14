@@ -10,7 +10,7 @@ import {ScrollProgress} from "@/components/ui/scroll-progress";
 import { ClerkProvider } from '@clerk/nextjs'
 import { Particles } from "@/components/ui/particles";
 import { ThemeProvider } from "@/components/providers/theme-provider";
-
+import { ReactQueryProvider } from './providers'
 
 const outfit = Outfit({
     variable: "--font-sans",
@@ -45,9 +45,11 @@ export default function RootLayout({
                 <body className={`${outfit.variable} ${geistSans.variable} ${geistMono.variable}`}>
                     <ScrollProgress />
                     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+                      <ReactQueryProvider>
                         <SoftBackdrop />
                         <LenisScroll />
                         {children}        
+                      </ReactQueryProvider>
                     </ThemeProvider>
                 </body>
             </html>

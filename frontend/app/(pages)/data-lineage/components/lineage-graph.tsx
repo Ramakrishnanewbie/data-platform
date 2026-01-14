@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useMemo } from 'react'
+import { useMemo, memo, useEffect } from 'react'
 import ReactFlow, {
   Node,
   Edge,
@@ -9,9 +9,10 @@ import ReactFlow, {
   MiniMap,
   useNodesState,
   useEdgesState,
-  addEdge,
-  Connection,
   MarkerType,
+  ReactFlowProvider,
+  useReactFlow,
+  Handle,
   Position,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
@@ -39,10 +40,11 @@ interface LineageGraphProps {
   nodes: LineageNode[]
   edges: LineageEdge[]
   rootNodeId: string
+  onNodeClick?: (projectId: string, datasetId: string, tableName: string) => void
+  onEdgeClick?: (sourceTable: string, targetTable: string) => void
 }
 
-// Custom node component
-function CustomNode({ data }: { data: any }) {
+const CustomNode = memo(({ data }: { data: any }) => {
   const getIcon = () => {
     switch (data.type) {
       case 'view':
@@ -57,110 +59,36 @@ function CustomNode({ data }: { data: any }) {
   const isRoot = data.isRoot
   
   return (
-    <Card className={`px-4 py-3 min-w-[200px] ${isRoot ? 'border-2 border-primary shadow-lg' : 'shadow-md'}`}>
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          {getIcon()}
-          <span className="font-semibold text-sm">{data.label}</span>
+    <>
+      <Handle type="target" position={Position.Left} />
+      <Handle type="source" position={Position.Right} />
+      
+      <Card 
+        className={`px-3 py-2 min-w-[180px] cursor-pointer hover:shadow-lg transition-shadow ${
+          isRoot ? 'border-2 border-primary shadow-md' : 'shadow-sm'
+        }`}
+        onClick={() => data.onClick?.(data.projectId, data.datasetId, data.tableName)}
+      >
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            {getIcon()}
+            <span className="font-semibold text-xs truncate">{data.label}</span>
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            <div className="truncate">{data.datasetId}</div>
+          </div>
         </div>
-        <div className="text-xs text-muted-foreground space-y-1">
-          <div className="truncate">{data.datasetId}</div>
-          <Badge variant={isRoot ? "default" : "secondary"} className="text-xs">
-            {data.type}
-          </Badge>
-        </div>
-      </div>
-    </Card>
+      </Card>
+    </>
   )
-}
+})
+
+CustomNode.displayName = 'CustomNode'
 
 const nodeTypes = {
   custom: CustomNode,
 }
 
-export default function LineageGraph({ nodes, edges, rootNodeId }: LineageGraphProps) {
-  // Convert lineage data to React Flow format
-  const { flowNodes, flowEdges } = useMemo(() => {
-    // Use Dagre or manual layout algorithm
-    const layoutNodes = layoutGraph(nodes, edges, rootNodeId)
-    
-    const flowNodes: Node[] = layoutNodes.map((node) => ({
-      id: node.id,
-      type: 'custom',
-      position: node.position,
-      data: {
-        label: node.label,
-        type: node.type,
-        projectId: node.projectId,
-        datasetId: node.datasetId,
-        tableName: node.tableName,
-        isRoot: node.id === rootNodeId,
-      },
-    }))
-
-    const flowEdges: Edge[] = edges.map((edge, index) => ({
-      id: `e${index}-${edge.source}-${edge.target}`,
-      source: edge.source,
-      target: edge.target,
-      type: 'smoothstep',
-      animated: true,
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-        width: 20,
-        height: 20,
-      },
-      style: {
-        strokeWidth: 2,
-      },
-    }))
-
-    return { flowNodes, flowEdges }
-  }, [nodes, edges, rootNodeId])
-
-  const [reactFlowNodes, setNodes, onNodesChange] = useNodesState(flowNodes)
-  const [reactFlowEdges, setEdges, onEdgesChange] = useEdgesState(flowEdges)
-
-  const onConnect = useCallback(
-    (params: Connection) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  )
-
-  return (
-    <div className="w-full h-full">
-      <ReactFlow
-        nodes={reactFlowNodes}
-        edges={reactFlowEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        fitView
-        attributionPosition="bottom-left"
-        minZoom={0.1}
-        maxZoom={2}
-      >
-        <Background />
-        <Controls />
-        <MiniMap
-          nodeColor={(node) => {
-            if (node.data.isRoot) return '#3b82f6'
-            switch (node.data.type) {
-              case 'view':
-                return '#a855f7'
-              case 'materialized_view':
-                return '#22c55e'
-              default:
-                return '#64748b'
-            }
-          }}
-          maskColor="rgb(240, 240, 240, 0.8)"
-        />
-      </ReactFlow>
-    </div>
-  )
-}
-
-// Simple layout algorithm - you can replace with Dagre for better layouts
 function layoutGraph(
   nodes: LineageNode[],
   edges: LineageEdge[],
@@ -169,7 +97,6 @@ function layoutGraph(
   const nodeMap = new Map(nodes.map((n) => [n.id, n]))
   const positioned: Array<LineageNode & { position: { x: number; y: number } }> = []
   
-  // Build adjacency lists
   const upstreamMap = new Map<string, string[]>()
   const downstreamMap = new Map<string, string[]>()
   
@@ -181,7 +108,6 @@ function layoutGraph(
     downstreamMap.get(edge.source)!.push(edge.target)
   })
   
-  // BFS layout from root
   const visited = new Set<string>()
   const levelMap = new Map<number, string[]>()
   
@@ -194,7 +120,6 @@ function layoutGraph(
     if (!levelMap.has(level)) levelMap.set(level, [])
     levelMap.get(level)!.push(id)
     
-    // Add upstream (left side)
     const upstream = upstreamMap.get(id) || []
     upstream.forEach((upId) => {
       if (!visited.has(upId)) {
@@ -203,7 +128,6 @@ function layoutGraph(
       }
     })
     
-    // Add downstream (right side)
     const downstream = downstreamMap.get(id) || []
     downstream.forEach((downId) => {
       if (!visited.has(downId)) {
@@ -213,11 +137,10 @@ function layoutGraph(
     })
   }
   
-  // Position nodes
-  const nodeWidth = 250
-  const nodeHeight = 100
-  const horizontalGap = 150
-  const verticalGap = 50
+  const nodeWidth = 200
+  const nodeHeight = 80
+  const horizontalGap = 180
+  const verticalGap = 60
   
   levelMap.forEach((nodeIds, level) => {
     nodeIds.forEach((nodeId, index) => {
@@ -235,4 +158,112 @@ function layoutGraph(
   })
   
   return positioned
+}
+
+function LineageGraphInner({ nodes, edges, rootNodeId, onNodeClick, onEdgeClick }: LineageGraphProps) {
+  const { fitView } = useReactFlow()
+
+  const { flowNodes, flowEdges } = useMemo(() => {
+    const layoutNodes = layoutGraph(nodes, edges, rootNodeId)
+    
+    const flowNodes: Node[] = layoutNodes.map((node) => ({
+      id: node.id,
+      type: 'custom',
+      position: node.position,
+      data: {
+        label: node.label,
+        type: node.type,
+        projectId: node.projectId,
+        datasetId: node.datasetId,
+        tableName: node.tableName,
+        isRoot: node.id === rootNodeId,
+        onClick: onNodeClick,
+      },
+    }))
+
+    const flowEdges: Edge[] = edges.map((edge, index) => ({
+      id: `edge-${index}`,
+      source: edge.source,
+      target: edge.target,
+      type: 'default',  // ✅ Changed from 'smoothstep' - gives smooth curves!
+      animated: true,
+      style: {
+        strokeWidth: 2.5,
+        stroke: '#3b82f6',
+        cursor: 'pointer',  // Show it's clickable
+      },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 18,
+        height: 18,
+        color: '#3b82f6',
+      },
+      // Store source/target for click handler
+      data: {
+        sourceTable: edge.source,
+        targetTable: edge.target,
+      },
+    }))
+
+    return { flowNodes, flowEdges }
+  }, [nodes, edges, rootNodeId, onNodeClick])
+
+  const [reactFlowNodes, setNodes, onNodesChange] = useNodesState(flowNodes)
+  const [reactFlowEdges, setEdges, onEdgesChange] = useEdgesState(flowEdges)
+
+  useEffect(() => {
+    setTimeout(() => {
+      fitView({ padding: 0.3, duration: 400 })
+    }, 50)
+  }, [flowNodes, flowEdges, fitView])
+
+  // Handle edge clicks
+  const handleEdgeClick = (event: React.MouseEvent, edge: Edge) => {
+    event.stopPropagation()
+    if (onEdgeClick && edge.data) {
+      onEdgeClick(edge.data.sourceTable, edge.data.targetTable)
+    }
+  }
+
+  return (
+    <div className="w-full h-full">
+      <ReactFlow
+        nodes={reactFlowNodes}
+        edges={reactFlowEdges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onEdgeClick={handleEdgeClick}  // ✅ Edge click handler
+        nodeTypes={nodeTypes}
+        fitView
+        fitViewOptions={{
+          padding: 0.2,
+          maxZoom: 1.2,
+        }}
+        minZoom={0.1}
+        maxZoom={2}
+      >
+        <Background gap={20} size={2} />
+        <Controls />
+        <MiniMap
+          nodeColor={(node) => {
+            if (node.data.isRoot) return '#3b82f6'
+            switch (node.data.type) {
+              case 'view': return '#a855f7'
+              case 'materialized_view': return '#22c55e'
+              default: return '#64748b'
+            }
+          }}
+          maskColor="rgb(240, 240, 240, 0.6)"
+        />
+      </ReactFlow>
+    </div>
+  )
+}
+
+export default function LineageGraph(props: LineageGraphProps) {
+  return (
+    <ReactFlowProvider>
+      <LineageGraphInner {...props} />
+    </ReactFlowProvider>
+  )
 }

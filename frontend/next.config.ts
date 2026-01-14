@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  experimental: {
+    staleTimes: {
+      dynamic: 1000 * 60 * 10,
+      static: 1000 * 60 * 60, 
+    },
+    useCache: true,
+  },
 };
 
 export default nextConfig;
