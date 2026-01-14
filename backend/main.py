@@ -10,7 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 import os
 from dotenv import load_dotenv
-from routers import bq_lineage
+from routers import bq_lineage, root_cause_analysis
 from redis_cache import init_cache, get_cache
 
 # Load environment variables
@@ -305,3 +305,4 @@ Focus on BigQuery-specific optimizations like partitioning, clustering, avoiding
 
 # Include lineage router
 app.include_router(bq_lineage.router, prefix="/api", tags=["bigquery"])
+app.include_router(root_cause_analysis.router, prefix="/api", tags=["root-cause-analysis"])

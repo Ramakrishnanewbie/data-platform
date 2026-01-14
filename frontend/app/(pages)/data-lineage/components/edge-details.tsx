@@ -5,13 +5,14 @@ import { X, Code, Clock, DollarSign, User, Play, Copy, Database } from 'lucide-r
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useState, useEffect } from 'react'
 
 interface EdgeDetailsPanelProps {
-  sourceTable: string  // Format: project.dataset.table
-  targetTable: string  // Format: project.dataset.table
+  sourceTable: string
+  targetTable: string
   onClose: () => void
 }
 
@@ -56,7 +57,7 @@ export default function EdgeDetailsPanel({ sourceTable, targetTable, onClose }: 
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
-    setNotification('✅ SQL copied to clipboard!')
+    setNotification('✅ SQL copied!')
   }
 
   const runInSqlEditor = () => {
@@ -86,183 +87,186 @@ export default function EdgeDetailsPanel({ sourceTable, targetTable, onClose }: 
     <>
       {notification && (
         <div className="fixed top-4 right-4 z-[60] animate-in slide-in-from-top duration-200">
-          <div className="bg-background border rounded-lg shadow-lg p-3">
-            <p className="text-sm font-medium">{notification}</p>
+          <div className="bg-background border rounded-lg shadow-lg px-3 py-1.5">
+            <p className="text-[11px] font-medium">{notification}</p>
           </div>
         </div>
       )}
 
-      <div className="fixed inset-y-0 right-0 w-[700px] bg-background border-l shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
-            <Code className="h-5 w-5 text-blue-500" />
+      <div className="h-full flex flex-col bg-background">
+        {/* Compact Header */}
+        <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20">
+          <div className="flex items-center gap-2">
+            <Code className="h-4 w-4 text-blue-500" />
             <div>
-              <h2 className="text-lg font-bold">Edge Details</h2>
-              <p className="text-xs text-muted-foreground">
+              <h3 className="text-sm font-semibold">Edge Details</h3>
+              <p className="text-[10px] text-muted-foreground">
                 {getSourceTableName()} → {getTargetTableName()}
               </p>
             </div>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
+
+          <div className="flex items-center gap-1">
+            {edgeData?.query && (
+              <>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={() => copyToClipboard(edgeData.query!)}>
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copy
+                </Button>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px]" onClick={runInSqlEditor}>
+                  <Play className="h-3 w-3 mr-1" />
+                  Run
+                </Button>
+              </>
+            )}
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
 
         {/* Content */}
-        <ScrollArea className="flex-1 p-4">
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-64 w-full" />
+        {isLoading ? (
+          <div className="flex-1 p-4">
+            <div className="flex gap-3">
+              <Skeleton className="h-16 flex-1" />
+              <Skeleton className="h-16 flex-1" />
+              <Skeleton className="h-16 flex-1" />
+              <Skeleton className="h-16 flex-1" />
             </div>
-          ) : edgeData?.query ? (
-            <div className="space-y-4">
-              {/* Quick Actions */}
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => copyToClipboard(edgeData.query!)}
-                >
-                  <Copy className="h-4 w-4 mr-2" />
-                  Copy SQL
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={runInSqlEditor}
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Run in Editor
-                </Button>
+          </div>
+        ) : edgeData?.query ? (
+          <ScrollArea className="flex-1 scrollbar-thin">
+            <div className="p-4 space-y-3">
+              {/* Performance Metrics - Horizontal Row */}
+              <div className="flex gap-3">
+                <Card className="flex-1 border-l-2 border-l-blue-500">
+                  <CardContent className="p-2.5">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Clock className="h-3 w-3 text-blue-500" />
+                      <p className="text-[10px] text-muted-foreground">Duration</p>
+                    </div>
+                    <p className="text-base font-bold">{formatDuration(edgeData.durationMs)}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="flex-1 border-l-2 border-l-purple-500">
+                  <CardContent className="p-2.5">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Database className="h-3 w-3 text-purple-500" />
+                      <p className="text-[10px] text-muted-foreground">Data Processed</p>
+                    </div>
+                    <p className="text-base font-bold">{formatBytes(edgeData.bytesProcessed)}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="flex-1 border-l-2 border-l-green-500">
+                  <CardContent className="p-2.5">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <DollarSign className="h-3 w-3 text-green-500" />
+                      <p className="text-[10px] text-muted-foreground">Est. Cost</p>
+                    </div>
+                    <p className="text-base font-bold">${edgeData.costEstimate.toFixed(4)}</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="flex-1 border-l-2 border-l-orange-500">
+                  <CardContent className="p-2.5">
+                    <p className="text-[10px] text-muted-foreground mb-0.5">Statement</p>
+                    <Badge variant="secondary" className="text-[10px] h-5">{edgeData.statementType}</Badge>
+                  </CardContent>
+                </Card>
+
+                <Card className="flex-1 border-l-2 border-l-yellow-500">
+                  <CardContent className="p-2.5">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <User className="h-3 w-3 text-yellow-500" />
+                      <p className="text-[10px] text-muted-foreground">Executed By</p>
+                    </div>
+                    <p className="text-[10px] font-medium truncate">{edgeData.userEmail}</p>
+                  </CardContent>
+                </Card>
               </div>
 
-              {/* Relationship Info */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Database className="h-4 w-4" />
-                    Relationship
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Source</span>
-                    <code className="text-xs bg-muted px-2 py-1 rounded">{getSourceTableName()}</code>
-                  </div>
-                  <div className="flex items-center justify-center py-1">
-                    <span className="text-2xl">→</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Target</span>
-                    <code className="text-xs bg-muted px-2 py-1 rounded">{getTargetTableName()}</code>
-                  </div>
-                  <div className="flex items-center justify-between text-sm pt-2 border-t">
-                    <span className="text-muted-foreground">Statement Type</span>
-                    <Badge variant="secondary">{edgeData.statementType}</Badge>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Tabs */}
+              <Tabs defaultValue="query" className="space-y-2">
+                <TabsList className="grid w-full grid-cols-2 h-8">
+                  <TabsTrigger value="query" className="text-[11px]">SQL Query</TabsTrigger>
+                  <TabsTrigger value="details" className="text-[11px]">Job Details</TabsTrigger>
+                </TabsList>
 
-              {/* Query Performance */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Performance Metrics</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm text-muted-foreground">Duration</span>
-                    </div>
-                    <span className="text-sm font-medium">{formatDuration(edgeData.durationMs)}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Database className="h-4 w-4 text-purple-500" />
-                      <span className="text-sm text-muted-foreground">Data Processed</span>
-                    </div>
-                    <span className="text-sm font-medium">{formatBytes(edgeData.bytesProcessed)}</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-green-500" />
-                      <span className="text-sm text-muted-foreground">Est. Cost</span>
-                    </div>
-                    <span className="text-sm font-medium">${edgeData.costEstimate.toFixed(4)}</span>
-                  </div>
+                <TabsContent value="query" className="mt-2">
+                  <Card>
+                    <CardContent className="p-2.5">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Code className="h-3.5 w-3.5" />
+                        <span className="text-[11px] font-medium">SQL Query</span>
+                      </div>
+                      <div className="relative">
+                        <pre className="text-[10px] bg-muted p-2.5 rounded-md overflow-x-auto max-h-[280px] font-mono scrollbar-thin">
+                          {edgeData.query}
+                        </pre>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-orange-500" />
-                      <span className="text-sm text-muted-foreground">Executed By</span>
-                    </div>
-                    <span className="text-sm font-medium truncate max-w-[200px]">{edgeData.userEmail}</span>
-                  </div>
-                </CardContent>
-              </Card>
+                <TabsContent value="details" className="mt-2">
+                  <div className="flex gap-3">
+                    <Card className="flex-1">
+                      <CardContent className="p-2.5">
+                        <p className="text-[11px] font-medium mb-2">Relationship</p>
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-muted-foreground">Source</span>
+                            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{getSourceTableName()}</code>
+                          </div>
+                          <div className="flex justify-center py-0.5">
+                            <span className="text-xl">→</span>
+                          </div>
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-muted-foreground">Target</span>
+                            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded">{getTargetTableName()}</code>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-              {/* Timestamps */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium">Execution Time</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Started</span>
-                    <span>{new Date(edgeData.startTime).toLocaleString()}</span>
+                    <Card className="flex-1">
+                      <CardContent className="p-2.5">
+                        <p className="text-[11px] font-medium mb-2">Execution Time</p>
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-muted-foreground">Started</span>
+                            <span>{new Date(edgeData.startTime).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex justify-between text-[10px]">
+                            <span className="text-muted-foreground">Completed</span>
+                            <span>{new Date(edgeData.endTime).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex justify-between text-[10px] pt-1.5 border-t">
+                            <span className="text-muted-foreground">Job ID</span>
+                            <code className="text-[10px] bg-muted px-1.5 py-0.5 rounded truncate max-w-[140px]">
+                              {edgeData.jobId.split(':').pop()}
+                            </code>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Completed</span>
-                    <span>{new Date(edgeData.endTime).toLocaleString()}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm pt-2 border-t">
-                    <span className="text-muted-foreground">Job ID</span>
-                    <code className="text-xs bg-muted px-2 py-1 rounded">{edgeData.jobId.split(':').pop()}</code>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* SQL Query */}
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Code className="h-4 w-4" />
-                    SQL Query
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative">
-                    <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto max-h-[400px] font-mono">
-                      {edgeData.query}
-                    </pre>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute top-2 right-2"
-                      onClick={() => copyToClipboard(edgeData.query!)}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                </TabsContent>
+              </Tabs>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-center p-8">
-              <Database className="h-16 w-16 text-muted-foreground" />
-              <div>
-                <h3 className="text-lg font-semibold mb-2">No Query Found</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  {edgeData?.message || "Could not find the SQL query that created this relationship. The job may be older than 30 days."}
-                </p>
-              </div>
-            </div>
-          )}
-        </ScrollArea>
+          </ScrollArea>
+        ) : (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <Database className="h-12 w-12 text-muted-foreground mb-3" />
+            <h3 className="text-sm font-semibold mb-1.5">No Query Found</h3>
+            <p className="text-[11px] text-muted-foreground max-w-md">
+              {edgeData?.message || "Could not find the SQL query that created this relationship."}
+            </p>
+          </div>
+        )}
       </div>
     </>
   )

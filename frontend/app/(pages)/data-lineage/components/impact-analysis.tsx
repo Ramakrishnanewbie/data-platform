@@ -1,19 +1,15 @@
 "use client"
 
-import { useState, useMemo, memo } from 'react'
+import { useMemo, memo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Separator } from '@/components/ui/separator'
 import {
   AlertTriangle,
   X,
   Download,
-  TrendingUp,
-  Users,
   Database,
-  FileWarning,
 } from 'lucide-react'
 import { Node, Edge } from 'reactflow'
 
@@ -42,7 +38,6 @@ function calculateImpact(nodes: Node[], edges: Edge[], sourceNodeId: string): Im
   const indirectDownstream: Node[] = []
   const visited = new Set<string>()
   
-  // BFS to find all downstream nodes
   const queue: Array<{ id: string; depth: number }> = [{ id: sourceNodeId, depth: 0 }]
   visited.add(sourceNodeId)
   let maxDepth = 0
@@ -51,7 +46,6 @@ function calculateImpact(nodes: Node[], edges: Edge[], sourceNodeId: string): Im
     const { id, depth } = queue.shift()!
     maxDepth = Math.max(maxDepth, depth)
     
-    // Find all edges where this node is the source
     const outgoingEdges = edges.filter(e => e.source === id)
     
     outgoingEdges.forEach(edge => {
@@ -71,11 +65,8 @@ function calculateImpact(nodes: Node[], edges: Edge[], sourceNodeId: string): Im
   }
   
   const totalAffected = directDownstream.length + indirectDownstream.length
-  
-  // Calculate risk score (0-100)
   const riskScore = Math.min(100, (totalAffected * 10) + (maxDepth * 5))
   
-  // Determine risk level
   let riskLevel: 'low' | 'medium' | 'high' | 'critical' = 'low'
   if (riskScore >= 80) {
     riskLevel = 'critical'
@@ -104,10 +95,10 @@ const ImpactAnalysis = memo(function ImpactAnalysis({ nodes, edges, selectedNode
 
   const getRiskColor = (level: string) => {
     switch (level) {
-      case 'critical': return { text: 'text-red-700', bg: 'bg-red-100', border: 'border-red-300' }
-      case 'high': return { text: 'text-orange-700', bg: 'bg-orange-100', border: 'border-orange-300' }
-      case 'medium': return { text: 'text-yellow-700', bg: 'bg-yellow-100', border: 'border-yellow-300' }
-      default: return { text: 'text-green-700', bg: 'bg-green-100', border: 'border-green-300' }
+      case 'critical': return { text: 'text-red-600', bg: 'bg-red-50', border: 'border-red-300', accent: 'bg-red-500' }
+      case 'high': return { text: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-300', accent: 'bg-orange-500' }
+      case 'medium': return { text: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-300', accent: 'bg-yellow-500' }
+      default: return { text: 'text-green-600', bg: 'bg-green-50', border: 'border-green-300', accent: 'bg-green-500' }
     }
   }
 
@@ -131,16 +122,6 @@ ${impact.directDownstream.map(n => `- ${n.data?.label || 'Unknown'} (${n.data?.d
 
 ## Indirect Dependencies (${impact.indirectDownstream.length})
 ${impact.indirectDownstream.map(n => `- ${n.data?.label || 'Unknown'} (${n.data?.datasetId || 'N/A'})`).join('\n')}
-
-## Recommendation
-${impact.riskLevel === 'critical' 
-  ? '⚠️ HIGH RISK: Extensive testing required. Consider gradual rollout.'
-  : impact.riskLevel === 'high'
-  ? '⚠️ MEDIUM-HIGH RISK: Thorough testing recommended. Review all affected pipelines.'
-  : impact.riskLevel === 'medium'
-  ? '⚠️ MODERATE RISK: Basic testing recommended. Monitor downstream tables.'
-  : '✅ LOW RISK: Minimal impact. Standard testing sufficient.'
-}
 `
     
     const blob = new Blob([report], { type: 'text/markdown' })
@@ -153,214 +134,162 @@ ${impact.riskLevel === 'critical'
   }
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[500px] bg-background border-l shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-200">
+    <div className="h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-5 py-3 border-b bg-muted/20">
+        <div className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-orange-500" />
           <div>
-            <h2 className="text-lg font-bold">Impact Analysis</h2>
+            <h3 className="text-sm font-semibold">Impact Analysis</h3>
             <p className="text-xs text-muted-foreground">{selectedNode.tableName}</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <X className="h-5 w-5" />
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={exportImpactReport}>
+            <Download className="h-3.5 w-3.5 mr-1.5" />
+            Export
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
-          {/* Risk Overview Card */}
-          <Card className={`border-2 ${riskColors.border}`}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium">Risk Assessment</CardTitle>
-                <Badge className={`${riskColors.bg} ${riskColors.text} border-0`}>
+      {/* Content - Horizontal Layout */}
+      <ScrollArea className="flex-1 scrollbar-thin">
+        <div className="p-5">
+          {/* Stats Row */}
+          <div className="flex gap-3 mb-4">
+            <Card className="flex-1 border-l-2 border-l-orange-500">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground mb-0.5">Risk Level</p>
+                <Badge className={`${riskColors.bg} ${riskColors.text} border-0 text-xs px-2`}>
                   {impact.riskLevel.toUpperCase()}
                 </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Risk Score */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-muted-foreground">Risk Score</span>
-                  <span className={`text-2xl font-bold ${riskColors.text}`}>
-                    {impact.riskScore}/100
-                  </span>
-                </div>
-                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className={`h-full ${riskColors.bg} transition-all duration-500`}
-                    style={{ width: `${impact.riskScore}%` }}
-                  />
-                </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="text-center p-2 bg-muted rounded-lg">
-                  <p className="text-xl font-bold">{impact.totalAffected}</p>
-                  <p className="text-xs text-muted-foreground">Affected Tables</p>
-                </div>
-                <div className="text-center p-2 bg-muted rounded-lg">
-                  <p className="text-xl font-bold">{impact.longestChain}</p>
-                  <p className="text-xs text-muted-foreground">Longest Chain</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="flex-1 border-l-2 border-l-blue-500">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground mb-0.5">Risk Score</p>
+                <p className="text-lg font-bold">{impact.riskScore}<span className="text-xs text-muted-foreground">/100</span></p>
+              </CardContent>
+            </Card>
 
-          {/* Impact Summary */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">Impact Summary</CardTitle>
-              <CardDescription className="text-xs">
-                What happens if you modify this table?
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Direct Dependencies</span>
-                <Badge variant="secondary">{impact.directDownstream.length}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Indirect Dependencies</span>
-                <Badge variant="secondary">{impact.indirectDownstream.length}</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">Total Impact</span>
-                <Badge variant="secondary">{impact.totalAffected} tables</Badge>
-              </div>
-            </CardContent>
-          </Card>
+            <Card className="flex-1 border-l-2 border-l-purple-500">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground mb-0.5">Total Impact</p>
+                <p className="text-lg font-bold">{impact.totalAffected}</p>
+              </CardContent>
+            </Card>
 
-          {/* Affected Tables - Direct */}
-          {impact.directDownstream.length > 0 && (
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-sm font-medium flex items-center gap-2">
-        <Database className="h-4 w-4 text-red-500" />
-        Direct Dependencies ({impact.directDownstream.length})
-      </CardTitle>
-      <CardDescription className="text-xs">
-        Tables that directly read from this table
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-2">
-        {impact.directDownstream.map((node) => (
-          <div key={node.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-            <div>
-              <p className="text-xs font-medium">{node.data?.label || 'Unknown'}</p>
-              <p className="text-[10px] text-muted-foreground">{node.data?.datasetId || ''}</p>
-            </div>
-            <Badge variant="outline" className="text-[10px]">{node.data?.type || 'table'}</Badge>
+            <Card className="flex-1 border-l-2 border-l-green-500">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground mb-0.5">Longest Chain</p>
+                <p className="text-lg font-bold">{impact.longestChain}</p>
+              </CardContent>
+            </Card>
           </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-)}
 
-          {/* Affected Tables - Indirect */}
-          {impact.indirectDownstream.length > 0 && (
-  <Card>
-    <CardHeader className="pb-3">
-      <CardTitle className="text-sm font-medium flex items-center gap-2">
-        <Database className="h-4 w-4 text-orange-500" />
-        Indirect Dependencies ({impact.indirectDownstream.length})
-      </CardTitle>
-      <CardDescription className="text-xs">
-        Tables affected through downstream chain
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="space-y-2">
-        {impact.indirectDownstream.map((node) => (
-          <div key={node.id} className="flex items-center justify-between p-2 bg-muted rounded-md">
-            <div>
-              <p className="text-xs font-medium">{node.data?.label || 'Unknown'}</p>
-              <p className="text-[10px] text-muted-foreground">{node.data?.datasetId || ''}</p>
+          {/* Progress Bar */}
+          <div className="mb-4 p-3 bg-muted/30 rounded-lg">
+            <div className="flex justify-between text-xs mb-2">
+              <span className="text-muted-foreground">Impact Score</span>
+              <span className={`font-semibold ${riskColors.text}`}>{impact.riskScore}%</span>
             </div>
-            <Badge variant="outline" className="text-[10px]">{node.data?.type || 'table'}</Badge>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className={`h-full ${riskColors.accent} transition-all duration-500`}
+                style={{ width: `${impact.riskScore}%` }}
+              />
+            </div>
           </div>
-        ))}
-      </div>
-    </CardContent>
-  </Card>
-)}
+
+          {/* Dependencies in 2 Columns */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Direct */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Database className="h-4 w-4 text-red-500" />
+                <h4 className="text-sm font-semibold">Direct ({impact.directDownstream.length})</h4>
+              </div>
+              {impact.directDownstream.length > 0 ? (
+                <div className="space-y-2">
+                  {impact.directDownstream.map((node) => (
+                    <div key={node.id} className="p-2.5 bg-muted/50 rounded-md hover:bg-muted transition-colors">
+                      <p className="text-xs font-medium truncate">{node.data?.label || 'Unknown'}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[10px] text-muted-foreground truncate">{node.data?.datasetId || ''}</p>
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0">{node.data?.type || 'table'}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">None</p>
+              )}
+            </div>
+
+            {/* Indirect */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Database className="h-4 w-4 text-orange-500" />
+                <h4 className="text-sm font-semibold">Indirect ({impact.indirectDownstream.length})</h4>
+              </div>
+              {impact.indirectDownstream.length > 0 ? (
+                <div className="space-y-2">
+                  {impact.indirectDownstream.map((node) => (
+                    <div key={node.id} className="p-2.5 bg-muted/50 rounded-md hover:bg-muted transition-colors">
+                      <p className="text-xs font-medium truncate">{node.data?.label || 'Unknown'}</p>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-[10px] text-muted-foreground truncate">{node.data?.datasetId || ''}</p>
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0">{node.data?.type || 'table'}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">None</p>
+              )}
+            </div>
+          </div>
 
           {/* Recommendations */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <FileWarning className="h-4 w-4" />
-                Recommendations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-xs">
-                {impact.riskLevel === 'critical' && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="font-semibold text-red-700 mb-1">⚠️ CRITICAL IMPACT</p>
-                    <ul className="list-disc list-inside space-y-1 text-red-600">
-                      <li>Extensive testing required before changes</li>
-                      <li>Consider gradual rollout strategy</li>
-                      <li>Notify all downstream table owners</li>
-                      <li>Create rollback plan</li>
-                      <li>Monitor all {impact.totalAffected} affected tables</li>
-                    </ul>
-                  </div>
-                )}
-                
-                {impact.riskLevel === 'high' && (
-                  <div className="p-3 bg-orange-50 border border-orange-200 rounded-md">
-                    <p className="font-semibold text-orange-700 mb-1">⚠️ HIGH IMPACT</p>
-                    <ul className="list-disc list-inside space-y-1 text-orange-600">
-                      <li>Thorough testing recommended</li>
-                      <li>Review all {impact.totalAffected} affected pipelines</li>
-                      <li>Coordinate with downstream owners</li>
-                      <li>Plan deployment window carefully</li>
-                    </ul>
-                  </div>
-                )}
-                
-                {impact.riskLevel === 'medium' && (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <p className="font-semibold text-yellow-700 mb-1">⚠️ MODERATE IMPACT</p>
-                    <ul className="list-disc list-inside space-y-1 text-yellow-600">
-                      <li>Standard testing recommended</li>
-                      <li>Monitor downstream tables after changes</li>
-                      <li>Notify affected teams</li>
-                    </ul>
-                  </div>
-                )}
-                
-                {impact.riskLevel === 'low' && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-                    <p className="font-semibold text-green-700 mb-1">✅ LOW IMPACT</p>
-                    <ul className="list-disc list-inside space-y-1 text-green-600">
-                      <li>Minimal downstream impact</li>
-                      <li>Standard testing sufficient</li>
-                      <li>Safe for development changes</li>
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Export Button */}
-          <Button 
-            onClick={exportImpactReport} 
-            variant="outline" 
-            className="w-full"
-            size="sm"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export Impact Report
-          </Button>
+          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <p className="text-xs font-semibold mb-2">Recommended Actions</p>
+            <div className="space-y-1.5 text-xs">
+              {impact.riskLevel === 'critical' && (
+                <>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Extensive testing required before changes</span></div>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Consider gradual rollout strategy</span></div>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Notify all {impact.totalAffected} downstream owners</span></div>
+                </>
+              )}
+              
+              {impact.riskLevel === 'high' && (
+                <>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Thorough testing recommended</span></div>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Review all {impact.totalAffected} affected pipelines</span></div>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Coordinate with downstream owners</span></div>
+                </>
+              )}
+              
+              {impact.riskLevel === 'medium' && (
+                <>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Standard testing recommended</span></div>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Monitor downstream tables after changes</span></div>
+                </>
+              )}
+              
+              {impact.riskLevel === 'low' && (
+                <>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Minimal downstream impact</span></div>
+                  <div className="flex gap-2"><span className="text-muted-foreground">•</span><span>Standard testing sufficient</span></div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </ScrollArea>
     </div>
