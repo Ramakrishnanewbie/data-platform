@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -12,6 +11,7 @@ from decimal import Decimal
 import os
 from dotenv import load_dotenv
 from routers import bq_lineage
+from redis_cache import init_cache, get_cache
 
 # Load environment variables
 load_dotenv()
@@ -27,6 +27,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize Redis Cache
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_DB = int(os.getenv("REDIS_DB", 0))
+
+# Initialize cache on startup
+cache = init_cache(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
 
 # Clients
 bq_client = bigquery.Client()
@@ -43,8 +50,6 @@ except Exception as e:
     gemini_model = None
     print(f"⚠️  WARNING: Vertex AI initialization failed: {e}")
 
-# Simple in-memory cache
-cache = {}
 
 class QueryRequest(BaseModel):
     query: str
@@ -70,15 +75,58 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "healthy"}
+    cache_status = "connected" if cache.is_connected() else "disconnected"
+    return {
+        "status": "healthy",
+        "cache": cache_status
+    }
+
+@app.get("/api/cache/stats")
+async def get_cache_stats():
+    """Get Redis cache statistics"""
+    if not cache.is_connected():
+        raise HTTPException(status_code=503, detail="Cache not available")
+    
+    stats = cache.get_stats()
+    return stats
+
+@app.delete("/api/cache/clear")
+async def clear_cache():
+    """Clear all cache"""
+    if cache.is_connected():
+        cache.clear_all()
+        return {"status": "cache cleared", "backend": "redis"}
+    return {"status": "cache not available"}
+
+@app.delete("/api/cache/clear/{pattern}")
+async def clear_cache_pattern(pattern: str):
+    """Clear cache keys matching pattern (e.g., 'lineage:*', 'assets:*')"""
+    if not cache.is_connected():
+        raise HTTPException(status_code=503, detail="Cache not available")
+    
+    # Security: only allow specific patterns
+    allowed_patterns = ["lineage:*", "assets:*", "schema:*"]
+    if pattern not in allowed_patterns:
+        raise HTTPException(status_code=400, detail=f"Pattern must be one of: {allowed_patterns}")
+    
+    deleted = cache.delete_pattern(pattern)
+    return {
+        "status": "success",
+        "pattern": pattern,
+        "keys_deleted": deleted
+    }
 
 @app.get("/api/bigquery/schema")
 async def get_schema():
-    """Fetch BigQuery datasets and tables"""
+    """Fetch BigQuery datasets and tables with Redis caching"""
     cache_key = "schema:all_datasets"
     
-    if cache_key in cache:
-        return cache[cache_key]
+    # Try cache first
+    if cache.is_connected():
+        cached = cache.get(cache_key)
+        if cached:
+            cached["cached"] = True
+            return cached
     
     try:
         datasets = []
@@ -111,8 +159,15 @@ async def get_schema():
                     "tables": tables
                 })
         
-        result = {"datasets": datasets}
-        cache[cache_key] = result
+        result = {
+            "datasets": datasets,
+            "cached": False
+        }
+        
+        # Cache for 12 hours
+        if cache.is_connected():
+            from redis_cache import TTL_SCHEMA
+            cache.set(cache_key, result, ttl=TTL_SCHEMA)
         
         return result
         
@@ -121,11 +176,16 @@ async def get_schema():
 
 @app.post("/api/bigquery/execute")
 async def execute_bigquery(request: QueryRequest):
-    """Execute BigQuery with proper serialization"""
-    cache_key = f"query:{hashlib.md5(request.query.encode()).hexdigest()}"
+    """Execute BigQuery with Redis caching"""
+    query_hash = hashlib.md5(request.query.encode()).hexdigest()
+    cache_key = f"query:{query_hash}"
     
-    if cache_key in cache:
-        return cache[cache_key]
+    # Try cache first
+    if cache.is_connected():
+        cached = cache.get(cache_key)
+        if cached:
+            cached["cached"] = True
+            return cached
     
     try:
         query_job = bq_client.query(request.query)
@@ -148,19 +208,16 @@ async def execute_bigquery(request: QueryRequest):
             "cached": False
         }
         
+        # Only cache SELECT queries
         if request.query.strip().upper().startswith("SELECT"):
-            cache[cache_key] = result
+            if cache.is_connected():
+                from redis_cache import TTL_QUERY_RESULT
+                cache.set(cache_key, result, ttl=TTL_QUERY_RESULT)
         
         return result
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-@app.delete("/api/cache/clear")
-async def clear_cache():
-    """Clear all cache"""
-    cache.clear()
-    return {"status": "cache cleared"}
 
 # ==================== AI ENDPOINTS ====================
 
@@ -245,7 +302,6 @@ Focus on BigQuery-specific optimizations like partitioning, clustering, avoiding
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Vertex AI error: {str(e)}")
-    
-    
 
+# Include lineage router
 app.include_router(bq_lineage.router, prefix="/api", tags=["bigquery"])

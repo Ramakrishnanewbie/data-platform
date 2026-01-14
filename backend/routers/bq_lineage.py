@@ -3,13 +3,14 @@ from google.cloud import bigquery
 from typing import List, Dict, Any
 from datetime import datetime
 import logging
+from redis_cache import get_cache, generate_cache_key, TTL_ASSETS, TTL_LINEAGE
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
 def get_bq_client():
-    """Dependency to get BigQuery client - replace with your auth logic"""
+    """Dependency to get BigQuery client"""
     return bigquery.Client()
 
 
@@ -19,8 +20,21 @@ async def get_bigquery_assets(
 ) -> Dict[str, Any]:
     """
     Fetch all BigQuery projects, datasets, and tables/views with metadata.
-    This uses INFORMATION_SCHEMA for comprehensive asset discovery.
+    Uses Redis caching with 6 hour TTL for performance.
     """
+    cache = get_cache()
+    cache_key = "assets:all_projects"
+    
+    # Try cache first
+    if cache and cache.is_connected():
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            logger.info("✨ Returning cached assets data")
+            cached_data["cached"] = True
+            return cached_data
+    
+    logger.info("🔄 Fetching fresh assets data from BigQuery...")
+    
     try:
         # Get the project ID from the client
         project_id = client.project
@@ -86,8 +100,14 @@ async def get_bigquery_assets(
             }],
             "totalProjects": 1,
             "totalDatasets": len(datasets_data),
-            "totalAssets": sum(len(d["assets"]) for d in datasets_data)
+            "totalAssets": sum(len(d["assets"]) for d in datasets_data),
+            "cached": False
         }
+        
+        # Cache the result for 6 hours
+        if cache and cache.is_connected():
+            cache.set(cache_key, result, ttl=TTL_ASSETS)
+            logger.info(f"💾 Cached assets data with TTL={TTL_ASSETS}s")
         
         return result
         
@@ -107,6 +127,7 @@ async def get_table_lineage(
 ) -> Dict[str, Any]:
     """
     Get lineage for a specific table using BigQuery job history and table metadata.
+    Uses Redis caching with 1 hour TTL for performance.
     
     Args:
         project_id: GCP project ID
@@ -115,6 +136,26 @@ async def get_table_lineage(
         direction: 'upstream' (dependencies), 'downstream' (dependents), or 'both'
         depth: How many levels to traverse (1-5)
     """
+    cache = get_cache()
+    cache_key = generate_cache_key(
+        "lineage",
+        project_id,
+        dataset_id,
+        table_id,
+        direction,
+        depth
+    )
+    
+    # Try cache first
+    if cache and cache.is_connected():
+        cached_data = cache.get(cache_key)
+        if cached_data:
+            logger.info(f"✨ Returning cached lineage for {project_id}.{dataset_id}.{table_id}")
+            cached_data["cached"] = True
+            return cached_data
+    
+    logger.info(f"🔄 Fetching fresh lineage data for {project_id}.{dataset_id}.{table_id}")
+    
     try:
         nodes = []
         edges = []
@@ -153,11 +194,19 @@ async def get_table_lineage(
         unique_nodes = {node["id"]: node for node in nodes}
         unique_edges = list({f"{edge['source']}-{edge['target']}": edge for edge in edges}.values())
         
-        return {
+        result = {
             "nodes": list(unique_nodes.values()),
             "edges": unique_edges,
-            "rootNode": root_node["id"]
+            "rootNode": root_node["id"],
+            "cached": False
         }
+        
+        # Cache the result for 1 hour
+        if cache and cache.is_connected():
+            cache.set(cache_key, result, ttl=TTL_LINEAGE)
+            logger.info(f"💾 Cached lineage data with TTL={TTL_LINEAGE}s")
+        
+        return result
         
     except Exception as e:
         logger.error(f"Error fetching lineage: {str(e)}")
