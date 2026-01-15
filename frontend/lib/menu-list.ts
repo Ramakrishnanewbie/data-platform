@@ -10,12 +10,23 @@ import {
   GitBranch,
   BookOpen,
   MessageSquare,
-  BarChart3
+  BarChart3,
+  Library,
+  FolderOpen,
+  Star,
+  Share2,
+  Table,
+  FileText,
+  Compass,
+  Bell,
+  Shield,
+  Clock
 } from "lucide-react";
 
 type Submenu = {
   href: string;
   label: string;
+  icon?: LucideIcon;
   active?: boolean;
 };
 
@@ -39,29 +50,76 @@ export function getMenuList(pathname: string): Group[] {
       menus: [
         {
           href: "/sql",
-          label: "SQL",
+          label: "SQL Editor",
           icon: Database,
           active: pathname.startsWith("/sql")
         },
         {
-          href: "/data-lineage",
-          label: "Data Lineage",
-          icon: GitBranch,
-          active: pathname.startsWith("/datalineage")
+          href: "/queries",
+          label: "Query Library",
+          icon: Library,
+          active: pathname.startsWith("/queries"),
+          submenus: [
+            { href: "/queries/mine", label: "My Queries", icon: FolderOpen },
+            { href: "/queries/team", label: "Team Queries", icon: Users },
+            { href: "/queries/starred", label: "Starred", icon: Star },
+            { href: "/queries/recent", label: "Recent", icon: Clock },
+          ]
         },
         {
           href: "/data-catalog",
           label: "Data Catalog",
           icon: BookOpen,
-          active: pathname.startsWith("/datacatalog")
+          active: pathname.startsWith("/data-catalog"),
+          submenus: [
+            { href: "/data-catalog/tables", label: "Tables", icon: Table },
+            { href: "/data-catalog/glossary", label: "Glossary", icon: FileText },
+          ]
+        },
+        {
+          href: "/data-lineage",
+          label: "Data Lineage",
+          icon: GitBranch,
+          active: pathname.startsWith("/data-lineage")
+        },
+        {
+          href: "/explorations",
+          label: "Explorations",
+          icon: Compass,
+          active: pathname.startsWith("/explorations"),
+          submenus: [
+            { href: "/explorations/mine", label: "My Explorations", icon: FolderOpen },
+            { href: "/explorations/shared", label: "Shared with me", icon: Share2 },
+          ]
         },
         {
           href: "/ai-chat",
           label: "AI Chat",
           icon: MessageSquare,
-          active: pathname.startsWith("/aichat")
+          active: pathname.startsWith("/ai-chat")
         },
-        
+      ]
+    },
+    {
+      groupLabel: "Settings",
+      menus: [
+        {
+          href: "/alerts",
+          label: "Alerts",
+          icon: Bell,
+          active: pathname.startsWith("/alerts")
+        },
+        {
+          href: "/settings",
+          label: "Settings",
+          icon: Settings,
+          active: pathname.startsWith("/settings"),
+          submenus: [
+            { href: "/settings/profile", label: "Profile", icon: Users },
+            { href: "/settings/team", label: "Team", icon: Users },
+            { href: "/settings/permissions", label: "Permissions", icon: Shield },
+          ]
+        },
       ]
     }
   ];
