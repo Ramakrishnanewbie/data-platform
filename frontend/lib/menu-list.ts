@@ -20,7 +20,10 @@ import {
   Compass,
   Bell,
   Shield,
-  Clock
+  Clock,
+  LayoutDashboard,
+  Plus,
+  Globe
 } from "lucide-react";
 
 type Submenu = {
@@ -64,6 +67,19 @@ export function getMenuList(pathname: string): Group[] {
             { href: "/query-library/queries/team", label: "Team Queries", icon: Users },
             { href: "/query-library/queries/starred", label: "Starred", icon: Star },
             { href: "/query-library/queries/recent", label: "Recent", icon: Clock },
+          ]
+        },
+        {
+          href: "/dashboards",
+          label: "Dashboard Hub",
+          icon: LayoutDashboard,
+          active: pathname.startsWith("/dashboards"),
+          submenus: [
+            { href: "/dashboards/mine", label: "My Dashboards", icon: FolderOpen },
+            { href: "/dashboards/shared", label: "Shared with Me", icon: Share2 },
+            { href: "/dashboards/team", label: "Team Dashboards", icon: Users },
+            { href: "/dashboards/public", label: "Public Dashboards", icon: Globe },
+            { href: "/dashboards/create", label: "Create Dashboard", icon: Plus },
           ]
         },
         {
