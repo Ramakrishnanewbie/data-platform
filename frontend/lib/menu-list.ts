@@ -55,15 +55,15 @@ export function getMenuList(pathname: string): Group[] {
           active: pathname.startsWith("/sql")
         },
         {
-          href: "/queries",
+          href: "/query-library",
           label: "Query Library",
           icon: Library,
-          active: pathname.startsWith("/queries"),
+          active: pathname.startsWith("/query-library"),
           submenus: [
-            { href: "/queries/mine", label: "My Queries", icon: FolderOpen },
-            { href: "/queries/team", label: "Team Queries", icon: Users },
-            { href: "/queries/starred", label: "Starred", icon: Star },
-            { href: "/queries/recent", label: "Recent", icon: Clock },
+            { href: "/query-library/queries/mine", label: "My Queries", icon: FolderOpen },
+            { href: "/query-library/queries/team", label: "Team Queries", icon: Users },
+            { href: "/query-library/queries/starred", label: "Starred", icon: Star },
+            { href: "/query-library/queries/recent", label: "Recent", icon: Clock },
           ]
         },
         {
