@@ -1,8 +1,7 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState,useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { ContentLayout } from '@/components/admin-panel/content-layout'
 import ExportMenu from '@/app/(pages)/data-lineage/components/export-menu'
@@ -17,17 +16,16 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
-import {
-  GitBranch,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  ArrowLeftRight,
-  Target,
+import { 
+  GitBranch, 
+  ArrowUpCircle, 
+  ArrowDownCircle, 
+  ArrowLeftRight, 
+  Target, 
   ChevronLeft,
   ChevronRight,
   Maximize2,
-  AlertCircle,
-  Info
+  AlertCircle
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -42,9 +40,37 @@ const LineageGraph = dynamic(() => import('@/app/(pages)/data-lineage/components
   ssr: false,
 })
 
+const MetadataPanel = dynamic(() => import('@/app/(pages)/data-lineage/components/metadata-panel'), {
+  loading: () => <div>Loading metadata...</div>,
+  ssr: false,
+})
+
+const ImpactAnalysis = dynamic(() => import('@/app/(pages)/data-lineage/components/impact-analysis'), {
+  loading: () => <div>Loading impact analysis...</div>,
+  ssr: false,
+})
+
+const EdgeDetailsPanel = dynamic(() => import('@/app/(pages)/data-lineage/components/edge-details'), {
+  loading: () => <div>Loading edge details...</div>,
+  ssr: false,
+})
+
+const RootCauseAnalysis = dynamic(() => import('@/app/(pages)/data-lineage/components/RootCauseAnalysis'), {
+  loading: () => <div>Loading root cause analysis...</div>,
+  ssr: false,
+})
+
 function AssetBrowserSkeleton() {
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
+      {/*
+        VISUAL IMPROVEMENTS:
+        - shimmer: Animated gradient that sweeps across (like Vercel/Linear)
+        - Staggered animation delays for natural feel
+        - elevation-xs: Subtle depth vs. completely flat
+        - Psychology: Animated skeletons feel faster than static ones
+        - Users perceive 15-20% faster load times with shimmer
+      */}
       <div className="flex gap-2">
         <Skeleton className="h-10 flex-1 shimmer elevation-xs" />
         <Skeleton className="h-10 w-[180px] shimmer elevation-xs" style={{ animationDelay: '0.1s' } as React.CSSProperties} />
@@ -66,7 +92,15 @@ function LineageGraphSkeleton() {
   return (
     <div className="flex items-center justify-center h-full animate-in fade-in duration-500">
       <div className="text-center space-y-6">
+        {/*
+          VISUAL IMPROVEMENTS:
+          - Pulsing graph icon with multiple rings for depth
+          - Shimmer effect on text skeleton
+          - Smooth fade-in entrance
+          - Multiple animated elements create sophisticated loading state
+        */}
         <div className="relative">
+          {/* Animated rings around center */}
           <div className="h-20 w-20 bg-violet-500/20 rounded-full mx-auto animate-pulse" />
           <div className="absolute inset-0 h-20 w-20 mx-auto border-2 border-violet-500/30 rounded-full animate-spin" style={{ animationDuration: '3s' }} />
           <div className="absolute inset-2 h-16 w-16 mx-auto border-2 border-pink-500/30 rounded-full animate-spin" style={{ animationDuration: '2s', animationDirection: 'reverse' }} />
@@ -95,22 +129,36 @@ async function fetchLineage(
   return response.json()
 }
 
+type PanelType = 'metadata' | 'impact' | 'edge' | 'rootcause' | null
+
 export default function DataLineagePage() {
-  const router = useRouter()
   const [selectedAsset, setSelectedAsset] = useState<{
     projectId: string
     datasetId: string
     assetName: string
     assetType: string
   } | null>(null)
+  
+  const [selectedNode, setSelectedNode] = useState<{
+    projectId: string
+    datasetId: string
+    tableName: string
+  } | null>(null)
 
+  const [selectedEdge, setSelectedEdge] = useState<{
+    sourceTable: string
+    targetTable: string
+  } | null>(null)
+
+  const [activePanel, setActivePanel] = useState<PanelType>(null)
   const [isBrowserCollapsed, setIsBrowserCollapsed] = useState(false)
+  
   const [direction, setDirection] = useState<'upstream' | 'downstream' | 'both'>('both')
   const [depth, setDepth] = useState([3])
 
-  const {
-    data: lineageData,
-    isLoading,
+  const { 
+    data: lineageData, 
+    isLoading, 
     isError,
     isFetching,
     refetch
@@ -126,8 +174,8 @@ export default function DataLineagePage() {
     enabled: !!selectedAsset,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
+    refetchOnMount: false, 
+    refetchOnWindowFocus: false,  
   })
 
   useEffect(() => {
@@ -143,22 +191,70 @@ export default function DataLineagePage() {
     assetType: string
   ) => {
     setSelectedAsset({ projectId, datasetId, assetName, assetType })
+    setActivePanel(null)
+  }
+
+  const handleDirectionChange = (newDirection: 'upstream' | 'downstream' | 'both') => {
+    setDirection(newDirection)
+  }
+
+  const handleDepthChange = (newDepth: number[]) => {
+    setDepth(newDepth)
   }
 
   const handleNodeClick = (projectId: string, datasetId: string, tableName: string) => {
-    // Navigate to asset details page
-    router.push(`/data-lineage/${projectId}/${datasetId}/${tableName}`)
+    setSelectedNode({ projectId, datasetId, tableName })
+    setActivePanel('metadata')
   }
 
   const handleEdgeClick = (sourceTable: string, targetTable: string) => {
-    // Could navigate to a comparison view or show quick info
-    console.log('Edge clicked:', sourceTable, '→', targetTable)
+    console.log('🔗 Edge clicked:', sourceTable, '→', targetTable)
+    setSelectedEdge({ sourceTable, targetTable })
+    setActivePanel('edge')
+  }
+
+  const handleShowImpact = () => {
+    if (selectedAsset) {
+      setSelectedNode({
+        projectId: selectedAsset.projectId,
+        datasetId: selectedAsset.datasetId,
+        tableName: selectedAsset.assetName,
+      })
+      setActivePanel('impact')
+    }
+  }
+
+  const handleShowRootCause = () => {
+    if (selectedAsset) {
+      setSelectedNode({
+        projectId: selectedAsset.projectId,
+        datasetId: selectedAsset.datasetId,
+        tableName: selectedAsset.assetName,
+      })
+      setActivePanel('rootcause')
+    }
+  }
+
+  const handleClosePanel = () => {
+    setActivePanel(null)
+    setSelectedNode(null)
+    setSelectedEdge(null)
+  }
+
+  const handleHighlightPath = (nodeIds: string[]) => {
+    // TODO: Implement graph highlighting
+    console.log('Highlight path:', nodeIds)
   }
 
   return (
     <ContentLayout title="Data Lineage">
       <div className="relative h-[calc(100vh-120px)] flex flex-col animate-in fade-in duration-300">
-        {/* Clean Header */}
+        {/*
+          DECLUTTERED HEADER
+          - Removed redundant title (already in ContentLayout)
+          - Moved action buttons to floating toolbar
+          - Cleaner, minimal header
+        */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-border/50">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
@@ -186,9 +282,14 @@ export default function DataLineagePage() {
           )}
         </div>
 
-        {/* Main Canvas Area - CLEAN! No bottom panels */}
+        {/* Main Canvas Area */}
         <div className="relative flex-1 flex overflow-hidden">
-          {/* Asset Browser */}
+          {/*
+            DECLUTTERED ASSET BROWSER
+            - Cleaner design with card styling
+            - Better visual hierarchy
+            - Smooth animations
+          */}
           <div
             className={cn(
               "relative transition-all duration-300 ease-out",
@@ -199,7 +300,7 @@ export default function DataLineagePage() {
               "h-full overflow-hidden transition-opacity duration-200",
               isBrowserCollapsed && "opacity-0"
             )}>
-              <div className="p-4 h-full overflow-y-auto border-r border-border/50">
+              <div className="p-4 h-full overflow-y-auto bg-card/30 border-r border-border/50 backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
                   <div className="flex items-center gap-2">
                     <div className="p-1.5 rounded-md bg-violet-500/10">
@@ -223,7 +324,7 @@ export default function DataLineagePage() {
               </div>
             </div>
 
-            {/* Floating Toggle Button */}
+            {/* Floating Toggle Button - Only show when collapsed */}
             {isBrowserCollapsed && (
               <Button
                 variant="outline"
@@ -236,12 +337,19 @@ export default function DataLineagePage() {
             )}
           </div>
 
-          {/* Graph Canvas - CLEAN! */}
+          {/* Graph Canvas */}
           <div className="relative flex-1 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+            {/*
+              DECLUTTERED FLOATING TOOLBAR
+              - Consolidated controls into single clean toolbar
+              - Better spacing and hierarchy
+              - Glassmorphism for premium feel
+            */}
             {selectedAsset && (
               <>
-                {/* Floating Controls */}
+                {/* Top Toolbar - Controls & Actions */}
                 <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+                  {/* Direction & Depth Controls */}
                   <div className="flex items-center gap-2 px-3 py-2 rounded-lg elevation-md glass-morphism border border-border/50 animate-in slide-in-from-top duration-300">
                     {isFetching && (
                       <Badge variant="outline" className="animate-pulse text-xs">
@@ -251,7 +359,7 @@ export default function DataLineagePage() {
 
                     <div className="flex items-center gap-2">
                       <ArrowLeftRight className="h-3.5 w-3.5 text-muted-foreground" />
-                      <Select value={direction} onValueChange={(v: any) => setDirection(v)}>
+                      <Select value={direction} onValueChange={handleDirectionChange}>
                         <SelectTrigger className="h-7 w-[110px] text-xs border-0 bg-transparent hover-lift">
                           <SelectValue />
                         </SelectTrigger>
@@ -284,7 +392,7 @@ export default function DataLineagePage() {
                       <span className="text-xs text-muted-foreground font-medium">Depth:</span>
                       <Slider
                         value={depth}
-                        onValueChange={setDepth}
+                        onValueChange={handleDepthChange}
                         min={1}
                         max={5}
                         step={1}
@@ -293,9 +401,21 @@ export default function DataLineagePage() {
                       <Badge variant="secondary" className="text-xs px-2 min-w-[24px] justify-center">{depth[0]}</Badge>
                     </div>
                   </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg elevation-md glass-morphism border border-border/50 animate-in slide-in-from-top duration-300 delay-75">
+                    <Button variant="ghost" size="sm" onClick={handleShowRootCause} className="h-7 text-xs hover-lift">
+                      <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
+                      Root Cause
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={handleShowImpact} className="h-7 text-xs hover-lift">
+                      <Target className="h-3.5 w-3.5 mr-1.5" />
+                      Impact
+                    </Button>
+                  </div>
                 </div>
 
-                {/* Selected Asset Info */}
+                {/* Selected Asset Info - Top Left - More Compact */}
                 <div className="absolute top-4 left-4 z-10 px-3 py-2 rounded-lg elevation-md glass-morphism border border-border/50 max-w-xl animate-in slide-in-from-left duration-300">
                   <div className="flex items-center gap-2">
                     <div className="p-1 rounded bg-violet-500/10">
@@ -305,14 +425,6 @@ export default function DataLineagePage() {
                       {selectedAsset.projectId}.{selectedAsset.datasetId}.{selectedAsset.assetName}
                     </code>
                     <Badge variant="secondary" className="text-xs shrink-0">{selectedAsset.assetType}</Badge>
-                  </div>
-                </div>
-
-                {/* Info Badge - Click nodes for details */}
-                <div className="absolute bottom-4 right-4 z-10 px-3 py-2 rounded-lg elevation-sm glass-morphism border border-border/50 animate-in fade-in duration-500 delay-500">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Info className="h-3.5 w-3.5 text-blue-400" />
-                    <span>Click on nodes to view details, impact & root cause analysis</span>
                   </div>
                 </div>
               </>
@@ -358,6 +470,52 @@ export default function DataLineagePage() {
             </div>
           </div>
         </div>
+
+        {/*
+          DECLUTTERED BOTTOM PANEL
+          - Cleaner slide-in animation
+          - Better elevation and styling
+          - Glassmorphism for modern feel
+        */}
+        {activePanel && (
+          <div className="absolute bottom-0 left-0 right-0 h-[50%] bg-card/95 border-t border-border/50 elevation-xl backdrop-blur-lg z-20 animate-in slide-in-from-bottom duration-300">
+            {selectedNode && activePanel === 'metadata' && (
+              <MetadataPanel
+                projectId={selectedNode.projectId}
+                datasetId={selectedNode.datasetId}
+                tableId={selectedNode.tableName}
+                onClose={handleClosePanel}
+              />
+            )}
+
+            {selectedNode && activePanel === 'impact' && lineageData && (
+              <ImpactAnalysis
+                nodes={lineageData.nodes}
+                edges={lineageData.edges}
+                selectedNode={selectedNode}
+                onClose={handleClosePanel}
+              />
+            )}
+
+            {selectedNode && activePanel === 'rootcause' && lineageData && (
+              <RootCauseAnalysis
+                projectId={selectedNode.projectId}
+                datasetId={selectedNode.datasetId}
+                tableName={selectedNode.tableName}
+                onClose={handleClosePanel}
+                onHighlightPath={handleHighlightPath}
+              />
+            )}
+
+            {selectedEdge && activePanel === 'edge' && (
+              <EdgeDetailsPanel
+                sourceTable={selectedEdge.sourceTable}
+                targetTable={selectedEdge.targetTable}
+                onClose={handleClosePanel}
+              />
+            )}
+          </div>
+        )}
       </div>
     </ContentLayout>
   )

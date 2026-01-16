@@ -7,9 +7,11 @@ interface ContentLayoutProps {
 
 export function ContentLayout({ title, children }: ContentLayoutProps) {
   return (
-    <div>
+    <div className="min-h-screen">
       <Navbar title={title} />
-      <div className="pt-2 pb-2 pl-2 pr-2">{children}</div>
+      <div className="p-8 animate-in fade-in duration-300">
+        {children}
+      </div>
     </div>
   );
 }

@@ -175,10 +175,16 @@ export const ResultsPanel = ({ results, error, onClose, executionTime }: Results
               transition={{ duration: 0.4, delay: 0.1 }}
               className="p-4"
             >
-              {/* Table with horizontal scroll */}
-              <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm shadow-2xl overflow-auto">
-                <Table>
-                  <TableHeader className="sticky top-0 z-10">
+              {/*
+                ENHANCED TABLE WITH PROFESSIONAL POLISH
+                - table-zebra: Subtle alternating row colors
+                - table-hover: Row lift on hover
+                - table-sticky-header: Sticky header with shadow
+                - elevation-sm: Depth for the container
+              */}
+              <div className="rounded-xl border border-slate-700/50 bg-slate-900/40 backdrop-blur-sm elevation-sm overflow-auto">
+                <Table className="table-zebra table-hover">
+                  <TableHeader className="table-sticky-header">
                     <TableRow className="border-slate-700/50 hover:bg-slate-800/50 bg-gradient-to-r from-slate-800/95 via-slate-800/90 to-slate-800/95">
                       {results.schema?.map((field, idx) => (
                         <TableHead

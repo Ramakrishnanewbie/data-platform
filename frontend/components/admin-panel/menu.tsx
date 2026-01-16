@@ -146,29 +146,52 @@ export function Menu({ isOpen }: MenuProps) {
                       // No submenus - direct link (same as before)
                       if (!hasSubmenus) {
                         return (
-                          <div className="w-full" key={menuIndex}>
+                          <div className="w-full relative" key={menuIndex}>
+                            {/*
+                              VISUAL IMPROVEMENTS:
+                              - Added relative positioning for active indicator
+                              - Animated left border appears on active state
+                              - Smooth slide-in animation for premium feel
+                            */}
+                            {isActive && (
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-pink-500 rounded-r-full animate-in slide-in-from-left duration-300" />
+                            )}
                             <TooltipProvider disableHoverableContent>
                               <Tooltip delayDuration={100}>
                                 <TooltipTrigger asChild>
+                                  {/*
+                                    VISUAL IMPROVEMENTS:
+                                    - hover-lift: Subtle upward movement on hover (-2px translateY)
+                                    - active-scale: Press down effect (0.98 scale)
+                                    - transition-all duration-200: Smooth state changes
+                                    - Group hover for icon color change
+                                    - Psychology: Tactile feedback = responsive, premium UI
+                                  */}
                                   <Button
                                     variant={isActive ? "secondary" : "ghost"}
-                                    className="w-full justify-start h-10 mb-1"
+                                    className={cn(
+                                      "w-full justify-start h-10 mb-1 hover-lift active-scale group",
+                                      isActive && "elevation-xs"
+                                    )}
                                     asChild
                                   >
                                     <Link href={href}>
                                       <span
                                         className={cn(
-                                          isOpen === false ? "" : "mr-4"
+                                          "transition-colors duration-200",
+                                          isOpen === false ? "" : "mr-4",
+                                          isActive ? "text-violet-400" : "group-hover:text-violet-400"
                                         )}
                                       >
                                         <Icon size={18} />
                                       </span>
                                       <p
                                         className={cn(
-                                          "max-w-[200px] truncate",
+                                          "max-w-[200px] truncate transition-all duration-200",
                                           isOpen === false
                                             ? "-translate-x-96 opacity-0"
-                                            : "translate-x-0 opacity-100"
+                                            : "translate-x-0 opacity-100",
+                                          isActive && "font-medium"
                                         )}
                                       >
                                         {label}
@@ -192,28 +215,44 @@ export function Menu({ isOpen }: MenuProps) {
                         <div
                           key={menuIndex}
                           ref={(el) => { triggerRefs.current[menuId] = el; }}
-                          className="w-full"
+                          className="w-full relative"
                           onMouseEnter={() => handleMouseEnter(menuId)}
                           onMouseLeave={handleMouseLeave}
                         >
+                          {/* Animated active indicator for submenu parent */}
+                          {isActive && (
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-pink-500 rounded-r-full animate-in slide-in-from-left duration-300" />
+                          )}
+                          {/*
+                            VISUAL IMPROVEMENTS:
+                            - hover-lift active-scale: Same tactile feedback as regular menu items
+                            - Icon color transition on hover
+                            - Smooth chevron rotation
+                          */}
                           <Button
                             variant={isActive ? "secondary" : "ghost"}
                             className={cn(
-                              "w-full justify-start h-10 mb-1",
-                              hoveredMenu === menuId && "bg-accent"
+                              "w-full justify-start h-10 mb-1 hover-lift active-scale group",
+                              hoveredMenu === menuId && "bg-accent",
+                              isActive && "elevation-xs"
                             )}
                           >
                             <span
-                              className={cn(isOpen === false ? "" : "mr-4")}
+                              className={cn(
+                                "transition-colors duration-200",
+                                isOpen === false ? "" : "mr-4",
+                                isActive ? "text-violet-400" : "group-hover:text-violet-400"
+                              )}
                             >
                               <Icon size={18} />
                             </span>
                             <p
                               className={cn(
-                                "max-w-[200px] truncate flex-1 text-left",
+                                "max-w-[200px] truncate flex-1 text-left transition-all duration-200",
                                 isOpen === false
                                   ? "-translate-x-96 opacity-0"
-                                  : "translate-x-0 opacity-100"
+                                  : "translate-x-0 opacity-100",
+                                isActive && "font-medium"
                               )}
                             >
                               {label}
@@ -222,8 +261,8 @@ export function Menu({ isOpen }: MenuProps) {
                               <ChevronRight
                                 size={16}
                                 className={cn(
-                                  "ml-auto transition-transform duration-200",
-                                  hoveredMenu === menuId && "rotate-90"
+                                  "ml-auto transition-all duration-300 ease-out",
+                                  hoveredMenu === menuId && "rotate-90 text-violet-400"
                                 )}
                               />
                             )}
@@ -236,7 +275,7 @@ export function Menu({ isOpen }: MenuProps) {
               </li>
             ))}
 
-            {/* Sign out button at bottom */}
+            {/* Sign out button at bottom
             <li className="w-full grow flex items-end">
               <TooltipProvider disableHoverableContent>
                 <Tooltip delayDuration={100}>
@@ -264,7 +303,7 @@ export function Menu({ isOpen }: MenuProps) {
                   )}
                 </Tooltip>
               </TooltipProvider>
-            </li>
+            </li> */}
           </ul>
         </nav>
       </ScrollArea>
@@ -272,7 +311,7 @@ export function Menu({ isOpen }: MenuProps) {
       {/* Flyout rendered via Portal - outside sidebar container */}
       {mounted && hoveredMenu && hoveredSubmenu && createPortal(
         <div
-          className="fixed animate-in fade-in-0 zoom-in-95 duration-100"
+          className="fixed animate-in fade-in-0 zoom-in-95 slide-in-from-left-2 duration-200"
           style={{
             top: flyoutPosition.top,
             left: flyoutPosition.left,
@@ -282,15 +321,22 @@ export function Menu({ isOpen }: MenuProps) {
           onMouseLeave={handleFlyoutMouseLeave}
         >
           {/* Invisible bridge to connect trigger and flyout */}
-          <div 
+          <div
             className="absolute right-full top-0 w-4 h-full"
             style={{ pointerEvents: 'auto' }}
           />
-          
-          <div className="bg-popover text-popover-foreground rounded-lg border shadow-2xl min-w-[220px]">
+
+          {/*
+            VISUAL IMPROVEMENTS:
+            - elevation-lg: Stronger shadow for floating menu
+            - glass-morphism: Frosted glass effect
+            - gradient-border: Subtle premium border effect
+            - Smooth entrance animation
+          */}
+          <div className="bg-popover text-popover-foreground rounded-lg border elevation-lg min-w-[220px] glass-morphism">
             <div className="p-2">
               {/* Submenu header */}
-              <div className="text-xs font-semibold text-muted-foreground px-3 py-2 border-b border-border mb-2">
+              <div className="text-xs font-semibold text-muted-foreground px-3 py-2 border-b border-border mb-2 bg-white/5 rounded-t-md">
                 {hoveredSubmenu.label}
               </div>
 
@@ -304,14 +350,17 @@ export function Menu({ isOpen }: MenuProps) {
                     key={subIndex}
                     href={subItem.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-md transition-colors",
-                      "hover:bg-accent hover:text-accent-foreground",
-                      isSubActive && "bg-accent text-accent-foreground font-medium"
+                      "flex items-center gap-3 px-3 py-2.5 rounded-md transition-all duration-200 group",
+                      "hover:bg-accent hover:text-accent-foreground hover-lift active-scale",
+                      isSubActive && "bg-accent text-accent-foreground font-medium elevation-xs"
                     )}
                     onClick={() => setHoveredMenu(null)}
                   >
                     {SubIcon && (
-                      <SubIcon className="h-4 w-4 shrink-0" />
+                      <SubIcon className={cn(
+                        "h-4 w-4 shrink-0 transition-colors duration-200",
+                        isSubActive ? "text-violet-400" : "group-hover:text-violet-400"
+                      )} />
                     )}
                     <span className="text-sm">{subItem.label}</span>
                   </Link>

@@ -13,6 +13,15 @@ body {
   overflow-y: hidden;
 }
 
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+}
+
 @layer base {
     body {
         @apply bg-gray-950 text-white antialiased;
@@ -56,6 +65,89 @@ body {
     animation: float 5s ease-in-out infinite;
 }
 
+/* Shimmer animation for loading skeletons - like Vercel/Linear */
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Fade in animation for content appearing */
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.4s ease-out;
+}
+
+/* Ripple animation for button clicks - Material Design inspired */
+@keyframes ripple-out {
+    0% {
+        width: 0;
+        height: 0;
+        opacity: 0.5;
+        transform: translate(-50%, -50%);
+    }
+    100% {
+        width: 300px;
+        height: 300px;
+        opacity: 0;
+        transform: translate(-50%, -50%);
+    }
+}
+
+.animate-ripple-out {
+    animation: ripple-out 0.6s ease-out;
+}
+
+/* Shake animation for form validation errors */
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+        transform: translateX(-4px);
+    }
+    20%, 40%, 60%, 80% {
+        transform: translateX(4px);
+    }
+}
+
+.animate-shake {
+    animation: shake 0.4s ease-in-out;
+}
+
+/* Success checkmark animation */
+@keyframes checkmark {
+    0% {
+        transform: scale(0) rotate(45deg);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2) rotate(45deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) rotate(45deg);
+        opacity: 1;
+    }
+}
+
+.animate-checkmark {
+    animation: checkmark 0.5s ease-out;
+}
+
 @theme {
     --color-primary: #8b5cf6;
     --color-primary-hover: #7c3aed;
@@ -71,6 +163,179 @@ body {
 
     .btn-secondary {
         @apply px-6 py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold backdrop-blur-sm border border-white/10 transition-all duration-300;
+    }
+
+    /* ===== ELEVATION SYSTEM ===== */
+    /* Creates depth hierarchy like Stripe/Vercel/Linear */
+    /* Use sparingly - too many shadows = visual chaos */
+
+    .elevation-xs {
+        @apply shadow-sm;
+        /* Subtle lift for nested cards */
+    }
+
+    .elevation-sm {
+        box-shadow:
+            0 1px 2px 0 rgb(0 0 0 / 0.05),
+            0 1px 3px 0 rgb(0 0 0 / 0.1);
+        /* Standard card elevation */
+    }
+
+    .elevation-md {
+        box-shadow:
+            0 4px 6px -1px rgb(0 0 0 / 0.1),
+            0 2px 4px -2px rgb(0 0 0 / 0.1),
+            0 0 0 1px rgb(255 255 255 / 0.05);
+        /* Floating panels, modals */
+    }
+
+    .elevation-lg {
+        box-shadow:
+            0 10px 15px -3px rgb(0 0 0 / 0.3),
+            0 4px 6px -4px rgb(0 0 0 / 0.2),
+            0 0 0 1px rgb(255 255 255 / 0.05);
+        /* Popovers, dropdowns, important cards */
+    }
+
+    .elevation-xl {
+        box-shadow:
+            0 20px 25px -5px rgb(0 0 0 / 0.4),
+            0 8px 10px -6px rgb(0 0 0 / 0.3),
+            0 0 0 1px rgb(255 255 255 / 0.05);
+        /* Command palette, critical modals */
+    }
+
+    /* ===== HOVER LIFT EFFECTS ===== */
+    /* Provides tactile feedback - makes UI feel responsive */
+
+    .hover-lift {
+        @apply transition-all duration-200 ease-out;
+    }
+
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        /* Subtle upward movement on hover */
+    }
+
+    .hover-lift-lg {
+        @apply transition-all duration-300 ease-out;
+    }
+
+    .hover-lift-lg:hover {
+        transform: translateY(-4px) scale(1.02);
+        /* Pronounced lift for cards */
+    }
+
+    /* ===== INTERACTIVE SCALE ===== */
+    /* Active/pressed states - gives tactile button feel */
+
+    .active-scale:active {
+        transform: scale(0.98);
+        @apply transition-transform duration-75;
+    }
+
+    /* ===== SHIMMER ANIMATION ===== */
+    /* Professional loading state like Vercel/Linear */
+
+    .shimmer {
+        background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.08),
+            transparent
+        );
+        background-size: 200% 100%;
+        animation: shimmer 2s infinite;
+    }
+
+    /* ===== FOCUS RINGS ===== */
+    /* Accessible focus states with smooth transitions */
+
+    .focus-ring-brand {
+        @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 transition-shadow duration-200;
+    }
+
+    /* ===== GLASSMORPHISM ===== */
+    /* Modern frosted glass effect for top bars/sidebars */
+
+    .glass-morphism {
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(12px) saturate(150%);
+        -webkit-backdrop-filter: blur(12px) saturate(150%);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* ===== GRADIENT BORDERS ===== */
+    /* Subtle premium feel like Linear app */
+
+    .gradient-border {
+        position: relative;
+        border: 1px solid transparent;
+        background: linear-gradient(var(--card), var(--card)) padding-box,
+                    linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(236, 72, 153, 0.3)) border-box;
+    }
+
+    .gradient-border-hover {
+        position: relative;
+        border: 1px solid transparent;
+        background: linear-gradient(var(--card), var(--card)) padding-box,
+                    linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1)) border-box;
+        transition: all 0.3s ease;
+    }
+
+    .gradient-border-hover:hover {
+        background: linear-gradient(var(--card), var(--card)) padding-box,
+                    linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(236, 72, 153, 0.5)) border-box;
+    }
+
+    /* ===== TABLE ENHANCEMENTS ===== */
+    /* Professional table styling like Snowflake/Retool */
+
+    /* Zebra striping - subtle alternating rows */
+    .table-zebra tbody tr:nth-child(even) {
+        background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .table-zebra tbody tr:nth-child(odd) {
+        background-color: transparent;
+    }
+
+    /* Row hover effect with lift */
+    .table-hover tbody tr {
+        @apply transition-all duration-150 ease-out;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(139, 92, 246, 0.08);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Sticky header with shadow */
+    .table-sticky-header thead {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(8px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Combined table styles - use all together */
+    .table-enhanced {
+        @apply w-full text-sm;
+    }
+
+    .table-enhanced thead th {
+        @apply px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider border-b border-border;
+    }
+
+    .table-enhanced tbody td {
+        @apply px-4 py-3 border-b border-border/50;
+    }
+
+    .table-enhanced tbody tr:last-child td {
+        @apply border-b-0;
     }
 }
 

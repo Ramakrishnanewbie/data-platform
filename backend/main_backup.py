@@ -12,14 +12,13 @@ import os
 from dotenv import load_dotenv
 from routers import bq_lineage, root_cause_analysis
 from redis_cache import init_cache, get_cache
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-from typing import List, Dict, Any
 
+# Load environment variables
 load_dotenv()
 
 app = FastAPI(title="Data Platform API")
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -28,17 +27,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize Redis Cache
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 REDIS_DB = int(os.getenv("REDIS_DB", 0))
 
+# Initialize cache on startup
 cache = init_cache(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB)
 
-# Thread pool for concurrent BigQuery operations
-executor = ThreadPoolExecutor(max_workers=10)
-
+# Clients
 bq_client = bigquery.Client()
 
+# Initialize Vertex AI (uses same credentials as BigQuery)
 PROJECT_ID = "tokyo-dispatch-475119-i4"
 LOCATION = "us-central1"
 
@@ -60,6 +60,7 @@ class AIRequest(BaseModel):
     schema_context: str = Field(None, alias="schema")
 
 def serialize_bigquery_value(value):
+    """Convert BigQuery types to JSON-serializable types"""
     if isinstance(value, (date, datetime)):
         return value.isoformat()
     elif isinstance(value, Decimal):
@@ -82,14 +83,16 @@ async def health():
 
 @app.get("/api/cache/stats")
 async def get_cache_stats():
+    """Get Redis cache statistics"""
     if not cache.is_connected():
         raise HTTPException(status_code=503, detail="Cache not available")
-
+    
     stats = cache.get_stats()
     return stats
 
 @app.delete("/api/cache/clear")
 async def clear_cache():
+    """Clear all cache"""
     if cache.is_connected():
         cache.clear_all()
         return {"status": "cache cleared", "backend": "redis"}
@@ -97,13 +100,15 @@ async def clear_cache():
 
 @app.delete("/api/cache/clear/{pattern}")
 async def clear_cache_pattern(pattern: str):
+    """Clear cache keys matching pattern (e.g., 'lineage:*', 'assets:*')"""
     if not cache.is_connected():
         raise HTTPException(status_code=503, detail="Cache not available")
-
+    
+    # Security: only allow specific patterns
     allowed_patterns = ["lineage:*", "assets:*", "schema:*"]
     if pattern not in allowed_patterns:
         raise HTTPException(status_code=400, detail=f"Pattern must be one of: {allowed_patterns}")
-
+    
     deleted = cache.delete_pattern(pattern)
     return {
         "status": "success",
@@ -111,144 +116,117 @@ async def clear_cache_pattern(pattern: str):
         "keys_deleted": deleted
     }
 
-# OPTIMIZED: Fetch single dataset's tables concurrently
-def fetch_dataset_tables(dataset_id: str) -> Dict[str, Any]:
-    """Fetch tables for a single dataset - runs in thread pool"""
-    tables = []
+@app.get("/api/bigquery/schema")
+async def get_schema():
+    """Fetch BigQuery datasets and tables with Redis caching"""
+    cache_key = "schema:all_datasets"
+    
+    # Try cache first
+    if cache.is_connected():
+        cached = cache.get(cache_key)
+        if cached:
+            cached["cached"] = True
+            return cached
+    
     try:
-        for table in bq_client.list_tables(dataset_id):
-            try:
+        datasets = []
+        
+        for dataset in bq_client.list_datasets():
+            dataset_id = dataset.dataset_id
+            tables = []
+            
+            for table in bq_client.list_tables(dataset_id):
                 table_ref = bq_client.get_table(f"{dataset_id}.{table.table_id}")
-
-                # Only get first 10 columns for performance
-                columns = [field.name for field in table_ref.schema[:10]]
-                if len(table_ref.schema) > 10:
-                    columns.append("...")
-
+                
+                columns = [field.name for field in table_ref.schema]
+                
                 primary_key = None
-                for field in table_ref.schema[:5]:  # Only check first 5 fields
+                for field in table_ref.schema:
                     if 'id' in field.name.lower() or field.name.lower().endswith('_key'):
                         primary_key = field.name
                         break
-
+                
                 tables.append({
                     "name": table.table_id,
                     "columns": columns,
                     "primaryKey": primary_key,
                     "row_count": table_ref.num_rows
                 })
-            except Exception as e:
-                print(f"Error fetching table {dataset_id}.{table.table_id}: {e}")
-                continue
-
-        return {
-            "name": dataset_id,
-            "tables": tables
-        } if tables else None
-    except Exception as e:
-        print(f"Error fetching dataset {dataset_id}: {e}")
-        return None
-
-# OPTIMIZED: Parallel schema fetching
-@app.get("/api/bigquery/schema")
-async def get_schema():
-    """OPTIMIZED: Fetch BigQuery datasets and tables with parallel processing"""
-    cache_key = "schema:all_datasets"
-
-    if cache.is_connected():
-        cached = cache.get(cache_key)
-        if cached:
-            cached["cached"] = True
-            return cached
-
-    try:
-        # Get all dataset IDs first (fast)
-        dataset_ids = [dataset.dataset_id for dataset in bq_client.list_datasets()]
-
-        # Fetch datasets concurrently using thread pool
-        loop = asyncio.get_event_loop()
-        tasks = [
-            loop.run_in_executor(executor, fetch_dataset_tables, dataset_id)
-            for dataset_id in dataset_ids
-        ]
-
-        # Wait for all datasets to be fetched
-        dataset_results = await asyncio.gather(*tasks)
-
-        # Filter out None results (failed fetches)
-        datasets = [ds for ds in dataset_results if ds is not None]
-
+            
+            if tables:
+                datasets.append({
+                    "name": dataset_id,
+                    "tables": tables
+                })
+        
         result = {
             "datasets": datasets,
             "cached": False
         }
-
+        
+        # Cache for 12 hours
         if cache.is_connected():
             from redis_cache import TTL_SCHEMA
             cache.set(cache_key, result, ttl=TTL_SCHEMA)
-
+        
         return result
-
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# OPTIMIZED: Batch query execution with streaming
 @app.post("/api/bigquery/execute")
 async def execute_bigquery(request: QueryRequest):
-    """OPTIMIZED: Execute BigQuery with streaming and caching"""
+    """Execute BigQuery with Redis caching"""
     query_hash = hashlib.md5(request.query.encode()).hexdigest()
     cache_key = f"query:{query_hash}"
-
+    
+    # Try cache first
     if cache.is_connected():
         cached = cache.get(cache_key)
         if cached:
             cached["cached"] = True
             return cached
-
+    
     try:
-        # Run query in thread pool to not block async loop
-        loop = asyncio.get_event_loop()
-
-        def execute_query():
-            query_job = bq_client.query(request.query)
-            results = query_job.result(max_results=1000)  # Limit results for performance
-
-            schema = [{"name": field.name, "type": field.field_type} for field in results.schema]
-
-            rows = []
-            for row in results:
-                serialized_row = {}
-                for key, value in dict(row).items():
-                    serialized_row[key] = serialize_bigquery_value(value)
-                rows.append(serialized_row)
-
-            return schema, rows
-
-        schema, rows = await loop.run_in_executor(executor, execute_query)
-
+        query_job = bq_client.query(request.query)
+        results = query_job.result()
+        
+        schema = [{"name": field.name, "type": field.field_type} for field in results.schema]
+        
+        # Properly serialize rows
+        rows = []
+        for row in results:
+            serialized_row = {}
+            for key, value in dict(row).items():
+                serialized_row[key] = serialize_bigquery_value(value)
+            rows.append(serialized_row)
+        
         result = {
             "schema": schema,
             "rows": rows,
             "total_rows": len(rows),
             "cached": False
         }
-
-        if request.query.strip().upper().startswith("SELECT") and len(rows) < 5000:
+        
+        # Only cache SELECT queries
+        if request.query.strip().upper().startswith("SELECT"):
             if cache.is_connected():
                 from redis_cache import TTL_QUERY_RESULT
                 cache.set(cache_key, result, ttl=TTL_QUERY_RESULT)
-
+        
         return result
-
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-# AI endpoints remain the same
+# ==================== AI ENDPOINTS ====================
+
 @app.post("/api/ai/generate-sql")
 async def generate_sql(request: AIRequest):
+    """Generate SQL from natural language using Vertex AI Gemini"""
     if not gemini_model:
         raise HTTPException(status_code=503, detail="AI service not available.")
-
+    
     try:
         prompt_text = f"""You are a BigQuery SQL expert. Generate a SQL query based on this request.
 
@@ -261,18 +239,20 @@ Return ONLY the SQL query, no explanation or markdown. Use proper BigQuery synta
 
         response = gemini_model.generate_content(prompt_text)
         sql = response.text.strip()
-
+        
+        # Remove markdown code blocks if present
         sql = sql.replace("```sql", "").replace("```", "").strip()
-
+        
         return {"sql": sql}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Vertex AI error: {str(e)}")
 
 @app.post("/api/ai/explain-query")
 async def explain_query(request: AIRequest):
+    """Explain what a SQL query does using Vertex AI Gemini"""
     if not gemini_model:
         raise HTTPException(status_code=503, detail="AI service not available.")
-
+    
     try:
         prompt_text = f"""Explain this BigQuery SQL query in simple, clear terms:
 
@@ -282,16 +262,17 @@ Provide a brief explanation (2-3 sentences) of what this query does. Focus on th
 
         response = gemini_model.generate_content(prompt_text)
         explanation = response.text.strip()
-
+        
         return {"explanation": explanation}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Vertex AI error: {str(e)}")
 
 @app.post("/api/ai/optimize-query")
 async def optimize_query(request: AIRequest):
+    """Suggest optimizations for a SQL query using Vertex AI Gemini"""
     if not gemini_model:
         raise HTTPException(status_code=503, detail="AI service not available.")
-
+    
     try:
         prompt_text = f"""Analyze this BigQuery SQL query and suggest optimizations:
 
@@ -307,9 +288,11 @@ Focus on BigQuery-specific optimizations like partitioning, clustering, avoiding
 
         response = gemini_model.generate_content(prompt_text)
         response_text = response.text.strip()
-
+        
+        # Remove markdown code blocks if present
         response_text = response_text.replace("```json", "").replace("```", "").strip()
-
+        
+        # Parse JSON response
         result = json.loads(response_text)
         return result
     except json.JSONDecodeError:
@@ -320,5 +303,6 @@ Focus on BigQuery-specific optimizations like partitioning, clustering, avoiding
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Vertex AI error: {str(e)}")
 
+# Include lineage router
 app.include_router(bq_lineage.router, prefix="/api", tags=["bigquery"])
 app.include_router(root_cause_analysis.router, prefix="/api", tags=["root-cause-analysis"])
