@@ -10,7 +10,7 @@ from datetime import date, datetime
 from decimal import Decimal
 import os
 from dotenv import load_dotenv
-from routers import bq_lineage, root_cause_analysis, explorations
+from routers import bq_lineage, root_cause_analysis
 from redis_cache import init_cache, get_cache
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -322,25 +322,5 @@ Focus on BigQuery-specific optimizations like partitioning, clustering, avoiding
 
 app.include_router(bq_lineage.router, prefix="/api", tags=["bigquery"])
 app.include_router(root_cause_analysis.router, prefix="/api", tags=["root-cause-analysis"])
-app.include_router(explorations.router, prefix="/api", tags=["explorations"])
 
 
-# Database initialization on startup
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database on startup."""
-    try:
-        from db.connection import init_db
-        await init_db()
-    except Exception as e:
-        print(f"⚠️  Database initialization error: {e}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Close database connections on shutdown."""
-    try:
-        from db.connection import close_db
-        await close_db()
-    except Exception:
-        pass

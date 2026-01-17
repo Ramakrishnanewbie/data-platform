@@ -17,7 +17,6 @@ import {
   Share2,
   Table,
   FileText,
-  Compass,
   Bell,
   Shield,
   Clock,
@@ -97,12 +96,6 @@ export function getMenuList(pathname: string): Group[] {
           label: "Data Lineage",
           icon: GitBranch,
           active: pathname.startsWith("/data-lineage")
-        },
-        {
-          href: "/explorations",
-          label: "Explorations",
-          icon: Compass,
-          active: pathname.startsWith("/explorations")
         },
         {
           href: "/ai-chat",
