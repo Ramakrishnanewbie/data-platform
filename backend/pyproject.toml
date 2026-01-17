@@ -1,7 +1,7 @@
 [project]
 name = "backend"
 version = "0.1.0"
-description = "Add your description here"
+description = "Data Platform API with BigQuery, AI, and Explorations"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -10,5 +10,8 @@ dependencies = [
     "hiredis>=3.3.0",
     "python-dotenv>=1.2.1",
     "redis>=7.1.0",
-    "redis-om",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    "psycopg2-binary>=2.9.0",
 ]

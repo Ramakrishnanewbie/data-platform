@@ -20,8 +20,7 @@ export default function AdminPanelLayout({
       <main
         className={cn(
           "min-h-[calc(100vh_-_56px)] transition-[margin-left] ease-in-out duration-300",
-          "bg-gradient-to-br from-zinc-900 via-slate-900 to-zinc-900",
-          "dark:from-zinc-950 dark:via-slate-950 dark:to-zinc-950",
+          "bg-background",
           !settings.disabled && (!getOpenState() ? "lg:ml-[90px]" : "lg:ml-72")
         )}
       >

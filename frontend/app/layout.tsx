@@ -44,11 +44,16 @@ export default function RootLayout({
             <html lang="en" suppressHydrationWarning>
                 <body className={`${outfit.variable} ${geistSans.variable} ${geistMono.variable}`}>
                     <ScrollProgress />
-                    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+                    <ThemeProvider
+                        attribute="class"
+                        defaultTheme="slate"
+                        enableSystem={false}
+                        themes={['slate', 'midnight', 'ocean', 'forest', 'sunset', 'rose', 'lavender', 'light', 'cream', 'mint', 'sky']}
+                      >
                       <ReactQueryProvider>
                         <SoftBackdrop />
                         <LenisScroll />
-                        {children}        
+                        {children}
                       </ReactQueryProvider>
                     </ThemeProvider>
                 </body>

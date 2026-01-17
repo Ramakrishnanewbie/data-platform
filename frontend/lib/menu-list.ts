@@ -102,11 +102,7 @@ export function getMenuList(pathname: string): Group[] {
           href: "/explorations",
           label: "Explorations",
           icon: Compass,
-          active: pathname.startsWith("/explorations"),
-          submenus: [
-            { href: "/explorations/mine", label: "My Explorations", icon: FolderOpen },
-            { href: "/explorations/shared", label: "Shared with me", icon: Share2 },
-          ]
+          active: pathname.startsWith("/explorations")
         },
         {
           href: "/ai-chat",
