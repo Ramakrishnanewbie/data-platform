@@ -51,7 +51,7 @@ export function Sidebar() {
       <div
         onMouseEnter={() => setIsHover(true)}
         onMouseLeave={() => setIsHover(false)}
-        className="relative h-full flex flex-col px-3 py-4 glass-morphism elevation-md border-r border-white/5"
+        className="relative h-full flex flex-col px-3 py-4 bg-sidebar border-r border-sidebar-border"
       >
         {/* Logo/Brand
         <Button

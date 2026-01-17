@@ -154,7 +154,7 @@ export function Menu({ isOpen }: MenuProps) {
                               - Smooth slide-in animation for premium feel
                             */}
                             {isActive && (
-                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-pink-500 rounded-r-full animate-in slide-in-from-left duration-300" />
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full animate-in slide-in-from-left duration-300" />
                             )}
                             <TooltipProvider disableHoverableContent>
                               <Tooltip delayDuration={100}>
@@ -180,7 +180,7 @@ export function Menu({ isOpen }: MenuProps) {
                                         className={cn(
                                           "transition-colors duration-200",
                                           isOpen === false ? "" : "mr-4",
-                                          isActive ? "text-violet-400" : "group-hover:text-violet-400"
+                                          isActive ? "text-primary" : "group-hover:text-primary"
                                         )}
                                       >
                                         <Icon size={18} />
@@ -221,7 +221,7 @@ export function Menu({ isOpen }: MenuProps) {
                         >
                           {/* Animated active indicator for submenu parent */}
                           {isActive && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-violet-500 to-pink-500 rounded-r-full animate-in slide-in-from-left duration-300" />
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full animate-in slide-in-from-left duration-300" />
                           )}
                           {/*
                             VISUAL IMPROVEMENTS:
@@ -241,7 +241,7 @@ export function Menu({ isOpen }: MenuProps) {
                               className={cn(
                                 "transition-colors duration-200",
                                 isOpen === false ? "" : "mr-4",
-                                isActive ? "text-violet-400" : "group-hover:text-violet-400"
+                                isActive ? "text-primary" : "group-hover:text-primary"
                               )}
                             >
                               <Icon size={18} />
@@ -262,7 +262,7 @@ export function Menu({ isOpen }: MenuProps) {
                                 size={16}
                                 className={cn(
                                   "ml-auto transition-all duration-300 ease-out",
-                                  hoveredMenu === menuId && "rotate-90 text-violet-400"
+                                  hoveredMenu === menuId && "rotate-90 text-primary"
                                 )}
                               />
                             )}
@@ -359,7 +359,7 @@ export function Menu({ isOpen }: MenuProps) {
                     {SubIcon && (
                       <SubIcon className={cn(
                         "h-4 w-4 shrink-0 transition-colors duration-200",
-                        isSubActive ? "text-violet-400" : "group-hover:text-violet-400"
+                        isSubActive ? "text-primary" : "group-hover:text-primary"
                       )} />
                     )}
                     <span className="text-sm">{subItem.label}</span>

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(npx next lint --quiet)",
+      "Bash(timeout 15 npm run build:*)",
+      "Bash(ls:*)"
+    ]
+  }
+}
